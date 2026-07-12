@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+.vite/
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# local uploads
+server/uploads/
+
+# test and coverage
+coverage/
+
+# logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
