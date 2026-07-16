@@ -25,4 +25,6 @@ docs/
 ## 当前文档
 
 - [前端项目结构](./frontend/project-structure.md)
+- [React Router 配置教程](./frontend/react-router-setup.md)
+- [TanStack Query Provider 配置教程](./frontend/tanstack-query-provider.md)
 - [MVP 页面原型](./design/memeseek-mvp.html)

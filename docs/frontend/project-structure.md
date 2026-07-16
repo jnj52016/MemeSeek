@@ -1,55 +1,54 @@
-# MemeSeek 客户端项目结构
+# MemeSeek 前端项目结构
 
-## 当前目标
+## 一句话理解
 
-MemeSeek 第一版客户端包含两个主要页面：
+前端项目可以先简单分成几类：
 
-- 梗图列表页：搜索、上传、浏览梗图，以及通过弹窗查看详情。
-- AI 提示词设置页：查看和维护梗图分析提示词、标签规则和模型配置。
+- `pages`：页面
+- `components`：可以重复使用的组件
+- `features`：具体业务功能
+- `services`：请求后端 API
+- `types`：TypeScript 类型
+- `mocks`：暂时用来模拟后端的数据
 
-当前目录结构保持简单，只为 MVP 的页面和功能预留位置，不提前引入复杂的架构。
-
-## 目录结构
+## 当前结构
 
 ```text
 client/
-├─ public/                     # 不需要经过构建处理的静态资源
+├─ public/                  # 可以直接访问的静态文件
 ├─ src/
-│  ├─ assets/                  # 图片、图标等前端资源
-│  ├─ components/              # 多个页面共用的展示组件
+│  ├─ assets/               # 页面使用的图片、图标
+│  ├─ components/           # 通用组件
 │  ├─ features/
-│  │  ├─ memes/                # 梗图相关功能
-│  │  └─ ai-settings/          # AI 提示词设置相关功能
-│  ├─ hooks/                   # 可复用的 React Hooks
-│  ├─ mocks/                   # 开发阶段使用的 Mock 数据
-│  ├─ pages/                   # 页面级组件
-│  ├─ services/                # API 请求和外部服务封装
-│  ├─ types/                   # TypeScript 类型定义
-│  ├─ App.tsx                  # 应用根组件和路由入口
-│  ├─ main.tsx                 # React 应用启动入口
-│  ├─ App.css                  # App 级样式（后续可逐步整理）
-│  └─ index.css                # 全局样式
-├─ PROJECT_STRUCTURE.md        # 本文档
-└─ package.json                # 客户端依赖和脚本
+│  │  ├─ memes/             # 梗图相关功能
+│  │  └─ ai-settings/       # AI 设置相关功能
+│  ├─ hooks/                # 可复用的 React Hooks
+│  ├─ mocks/                # Mock 梗图数据
+│  ├─ pages/                # 页面组件
+│  ├─ services/             # API 请求代码
+│  ├─ types/                # TypeScript 类型和生成的 API 类型
+│  ├─ App.tsx               # 应用根组件
+│  └─ main.tsx              # 应用启动入口
+└─ package.json             # 前端依赖和命令
 ```
 
-## 各目录怎么使用
+## 这几个目录怎么用
 
 ### `pages`
 
-存放页面级组件，例如：
+放页面：
 
 ```text
 pages/
-├─ MemeListPage.tsx
-└─ AiSettingsPage.tsx
+├─ MemeListPage.tsx         # 梗图列表页
+└─ AiSettingsPage.tsx       # AI 提示词页面
 ```
 
-详情暂时不是独立页面，而是梗图列表页中的弹窗，因此不需要单独创建详情页。
+梗图详情暂时是弹窗，不单独创建详情页。
 
 ### `components`
 
-存放跨页面复用的组件，例如：
+放多个地方都可能使用的组件，例如：
 
 ```text
 components/
@@ -58,42 +57,107 @@ components/
 └─ MemeDetailModal.tsx
 ```
 
-只有在组件确实被多个功能使用时，才放到这里。
-
 ### `features`
 
-按照业务功能组织代码。梗图列表、上传和详情相关代码可以放到 `features/memes`，AI 提示词页面相关代码可以放到 `features/ai-settings`。
+放业务功能内部的代码。
 
-这样可以避免把所有业务代码都堆在 `components` 目录中。
+```text
+features/
+├─ memes/                   # 上传、列表、详情相关代码
+└─ ai-settings/             # AI 提示词设置相关代码
+```
 
-### `types`
-
-存放共享的数据类型，后续会在这里定义：
-
-- `Meme`
-- `MemeStatus`
-- `AiSettings`
-
-目前只创建目录，不提前写具体类型。
-
-### `mocks`
-
-存放前端独立开发阶段使用的 Mock 梗图和 AI 设置数据。后续接入后端 API 后，可以逐步替换这些数据。
+刚开始可以先把页面组件放在 `pages`，功能复杂后再移动到对应的 `features` 中。
 
 ### `services`
 
-存放 API 调用代码，例如获取梗图列表、上传梗图、修改梗图和删除梗图。页面组件不直接编写请求细节。
+放和后端通信的代码，例如：
 
-### `hooks`
+```text
+services/
+├─ api-client.ts            # 统一的请求客户端
+└─ meme-service.ts          # 梗图相关 API
+```
 
-存放可复用的状态和行为逻辑，例如搜索参数、上传状态或梗图查询逻辑。简单的局部状态仍然直接使用组件内的 `useState`。
+页面不直接写详细的请求代码，而是调用这里的函数。
 
-## 当前暂时不做的事情
+### `types`
 
-- 不创建独立的搜索结果页。
-- 不创建独立的梗图详情页。
-- 不提前设计完整的用户、权限和登录目录。
-- 不把所有状态都放入 Zustand。
-- 不在客户端保存真实的 AI API Key。
+放 TypeScript 类型，例如：
 
-后续页面和数据模型稳定后，再逐步补充具体文件。
+```text
+types/
+├─ meme.ts                  # Meme 类型
+└─ api.d.ts                 # 根据 OpenAPI 生成的类型
+```
+
+## OpenAPI 工具放在哪里
+
+你提到的两个工具都属于“前端和后端联调工具”，不是页面组件。
+
+### `openapi-typescript`
+
+它根据后端的 OpenAPI 文档生成 TypeScript 类型。
+
+它是一个开发工具，安装在 `client` 的开发依赖中，生成结果放在：
+
+```text
+client/src/types/api.d.ts
+```
+
+可以在 `client/package.json` 中配置命令：
+
+```json
+{
+  "scripts": {
+    "generate:api": "openapi-typescript http://localhost:3000/api-json -o src/types/api.d.ts"
+  }
+}
+```
+
+以后后端启动后，运行：
+
+```powershell
+pnpm --filter client generate:api
+```
+
+就可以重新生成 API 类型。
+
+### `openapi-fetch`
+
+它根据生成的 OpenAPI 类型提供类型安全的请求功能。
+
+它是前端运行时依赖，主要代码放在：
+
+```text
+client/src/services/api-client.ts
+```
+
+之后 `meme-service.ts` 可以使用这个统一客户端请求后端。
+
+简单关系如下：
+
+```text
+后端 Swagger/OpenAPI 文档
+        ↓
+openapi-typescript
+        ↓
+src/types/api.d.ts
+        ↓
+openapi-fetch
+        ↓
+src/services/api-client.ts
+        ↓
+页面和业务功能
+```
+
+## 现在暂时不用做什么
+
+目前后端还没有正式的 Meme API，所以暂时：
+
+- 不安装 `openapi-typescript`
+- 不安装 `openapi-fetch`
+- 不创建 `api.d.ts`
+- 不创建 `api-client.ts`
+
+等后端完成 Swagger 配置并能访问 OpenAPI 文档后，再接入这两个工具。
