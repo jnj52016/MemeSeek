@@ -2,12 +2,7 @@
 
 import { Button, Input } from 'antd'
 import AppLayout from '../components/AppLayout'
-
-const mockMemes = [
-  { title: '猫猫震惊', color: 'from-blue-500 to-orange-400', emoji: '😳' },
-  { title: '今天也要努力', color: 'from-orange-400 to-amber-300', emoji: '💪' },
-  { title: '这合理吗', color: 'from-emerald-500 to-teal-300', emoji: '🤨' },
-]
+import { mockMemes } from '../mocks/memes'
 
 function MemeListPage() {
   return (
@@ -51,11 +46,11 @@ function MemeListPage() {
               type="button"
               className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
-              <div
-                className={`flex h-44 items-center justify-center bg-gradient-to-br ${meme.color} text-6xl`}
-              >
-                {meme.emoji}
-              </div>
+              <img
+                src={meme.imageUrl}
+                alt={meme.title}
+                className="h-44 w-full object-cover"
+              />
               <div className="p-4">
                 <p className="font-semibold text-slate-900">{meme.title}</p>
                 <p className="mt-1 text-sm text-slate-500">点击查看详情</p>
