@@ -1,10 +1,14 @@
 //梗图库页面
-
+import { useState } from 'react'
+import MemeDetailModal from '../features/memes/components/MemeDetailModal'
+import type { Meme } from '../types/meme'
 import { Button, Input } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { mockMemes } from '../mocks/memes'
 
+
 function MemeListPage() {
+  const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   return (
     <AppLayout>
       <section className="space-y-8">
@@ -34,7 +38,7 @@ function MemeListPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <button
             type="button"
-            className="flex min-h-56 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 text-orange-700 transition hover:bg-orange-100"
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
             <span className="mb-3 text-4xl font-light">+</span>
             <span className="font-medium">上传梗图</span>
@@ -42,8 +46,9 @@ function MemeListPage() {
 
           {mockMemes.map((meme) => (
             <button
-              key={meme.title}
+              key={meme.id}
               type="button"
+              onClick={() => setSelectedMeme(meme)}
               className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
               <img
@@ -59,6 +64,11 @@ function MemeListPage() {
           ))}
         </div>
       </section>
+      <MemeDetailModal
+        meme={selectedMeme}
+        open={selectedMeme !== null}
+        onClose={() => setSelectedMeme(null)}
+      />
     </AppLayout>
   )
 }
