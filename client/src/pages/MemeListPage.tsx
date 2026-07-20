@@ -1,19 +1,57 @@
 //梗图库页面
 import { useState } from 'react'
-import MemeCard from '../features/memes/components/MemeCard'
+import { useSearchParams } from 'react-router'
 import MemeDetailModal from '../features/memes/components/MemeDetailModal'
 import MemeUploadDrawer from '../features/memes/components/MemeUploadDrawer'
-import MemeUploadTile from '../features/memes/components/MemeUploadTile'
+import MemeGrid from '../features/memes/components/MemeGrid'
+import MemeSearchBar from '../features/memes/components/MemeSearchBar'
 import type { Meme } from '../types/meme'
-import { Input } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { mockMemes } from '../mocks/memes'
 
 
 function MemeListPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [memes, setMemes] = useState<Meme[]>(mockMemes)
+  const [inputValue, setInputValue] = useState(
+    () => searchParams.get('q') ?? '',
+  )
+  const searchKeyword = searchParams.get('q') ?? ''
+
+  const normalizedKeyword = searchKeyword.trim().toLowerCase()
+  const filteredMemes = normalizedKeyword
+    ? memes.filter((meme) => {
+        const searchableText = [
+          meme.title,
+          meme.description,
+          meme.ocrText,
+          ...meme.tags,
+        ]
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(normalizedKeyword)
+      })
+    : memes
+
+  const handleSearch = (nextKeyword: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams)
+
+    if (nextKeyword.trim()) {
+      nextSearchParams.set('q', nextKeyword)
+    } else {
+      nextSearchParams.delete('q')
+    }
+
+    setSearchParams(nextSearchParams, { replace: true })
+  }
+
+  const handleClearSearch = () => {
+    setInputValue('')
+    handleSearch('')
+  }
 
   const handleUploaded = (meme: Meme) => {
     setMemes((currentMemes) => [meme, ...currentMemes])
@@ -35,24 +73,18 @@ function MemeListPage() {
 
         </div>
 
-        <Input.Search
-          size="large"
-          allowClear
-          placeholder="搜索梗图名称或标签"
-          aria-label="搜索梗图名称或标签"
+        <MemeSearchBar
+          value={inputValue}
+          onChange={setInputValue}
+          onSearch={handleSearch}
+          onClear={handleClearSearch}
         />
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <MemeUploadTile onClick={() => setUploadOpen(true)} />
-
-          {memes.map((meme) => (
-            <MemeCard
-              key={meme.id}
-              meme={meme}
-              onClick={() => setSelectedMeme(meme)}
-            />
-          ))}
-        </div>
+        <MemeGrid
+          memes={filteredMemes}
+          onUpload={() => setUploadOpen(true)}
+          onSelect={setSelectedMeme}
+        />
       </section>
       <MemeDetailModal
         meme={selectedMeme}
