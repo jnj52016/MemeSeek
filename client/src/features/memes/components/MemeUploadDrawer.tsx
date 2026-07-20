@@ -1,15 +1,16 @@
-// 这个是一个 MemeUploadModal 组件，用于显示一个上传梗图的模态框。用户可以选择图片文件进行上传，并预览所选图片。
+// 这个是一个 MemeUploadModal 组件，用于显示一个上传梗图的模态框。
+// 用户可以选择图片文件进行上传，并预览所选图片。
 import { InboxOutlined } from '@ant-design/icons'
 import { Button, Drawer, message, Upload } from 'antd'
 import type { UploadProps } from 'antd'
 import { useEffect, useState } from 'react'
 
-type MemeUploadModalProps = {
+type MemeUploadDrawerProps = {
   open: boolean
   onClose: () => void
 }
 
-function MemeUploadModal({ open, onClose }: MemeUploadModalProps) {
+function MemeUploadDrawer({ open, onClose }: MemeUploadDrawerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
@@ -108,4 +109,4 @@ function MemeUploadModal({ open, onClose }: MemeUploadModalProps) {
   )
 }
 
-export default MemeUploadModal
+export default MemeUploadDrawer

@@ -1,14 +1,19 @@
 //梗图库页面
 import { useState } from 'react'
+import MemeCard from '../features/memes/components/MemeCard'
 import MemeDetailModal from '../features/memes/components/MemeDetailModal'
+import MemeUploadDrawer from '../features/memes/components/MemeUploadDrawer'
+import MemeUploadTile from '../features/memes/components/MemeUploadTile'
 import type { Meme } from '../types/meme'
-import { Button, Input } from 'antd'
+import { Input } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { mockMemes } from '../mocks/memes'
 
 
 function MemeListPage() {
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
+  const [uploadOpen, setUploadOpen] = useState(false)
+
   return (
     <AppLayout>
       <section className="space-y-8">
@@ -23,9 +28,6 @@ function MemeListPage() {
             </p>
           </div>
 
-          <Button type="primary" size="large">
-            上传梗图
-          </Button>
         </div>
 
         <Input.Search
@@ -36,31 +38,14 @@ function MemeListPage() {
         />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <button
-            type="button"
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-          >
-            <span className="mb-3 text-4xl font-light">+</span>
-            <span className="font-medium">上传梗图</span>
-          </button>
+          <MemeUploadTile onClick={() => setUploadOpen(true)} />
 
           {mockMemes.map((meme) => (
-            <button
+            <MemeCard
               key={meme.id}
-              type="button"
+              meme={meme}
               onClick={() => setSelectedMeme(meme)}
-              className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-            >
-              <img
-                src={meme.imageUrl}
-                alt={meme.title}
-                className="h-44 w-full object-cover"
-              />
-              <div className="p-4">
-                <p className="font-semibold text-slate-900">{meme.title}</p>
-                <p className="mt-1 text-sm text-slate-500">点击查看详情</p>
-              </div>
-            </button>
+            />
           ))}
         </div>
       </section>
@@ -68,6 +53,10 @@ function MemeListPage() {
         meme={selectedMeme}
         open={selectedMeme !== null}
         onClose={() => setSelectedMeme(null)}
+      />
+      <MemeUploadDrawer
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
       />
     </AppLayout>
   )
