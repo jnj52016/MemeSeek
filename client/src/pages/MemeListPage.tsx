@@ -13,6 +13,11 @@ import { mockMemes } from '../mocks/memes'
 function MemeListPage() {
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [memes, setMemes] = useState<Meme[]>(mockMemes)
+
+  const handleUploaded = (meme: Meme) => {
+    setMemes((currentMemes) => [meme, ...currentMemes])
+  }
 
   return (
     <AppLayout>
@@ -40,7 +45,7 @@ function MemeListPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <MemeUploadTile onClick={() => setUploadOpen(true)} />
 
-          {mockMemes.map((meme) => (
+          {memes.map((meme) => (
             <MemeCard
               key={meme.id}
               meme={meme}
@@ -57,6 +62,7 @@ function MemeListPage() {
       <MemeUploadDrawer
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
+        onUploaded={handleUploaded}
       />
     </AppLayout>
   )

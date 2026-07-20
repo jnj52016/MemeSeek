@@ -1,18 +1,70 @@
-// 这个是一个 MemeUploadModal 组件，用于显示一个上传梗图的模态框。
-// 用户可以选择图片文件进行上传，并预览所选图片。
 import { InboxOutlined } from '@ant-design/icons'
-import { Button, Drawer, message, Upload } from 'antd'
+import {
+  Alert,
+  Button,
+  Drawer,
+  message,
+  Progress,
+  Upload,
+} from 'antd'
 import type { UploadProps } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { Meme } from '../../../types/meme'
 
 type MemeUploadDrawerProps = {
   open: boolean
   onClose: () => void
+  onUploaded: (meme: Meme) => void
 }
 
-function MemeUploadDrawer({ open, onClose }: MemeUploadDrawerProps) {
+type UploadStatus =
+  | 'IDLE'
+  | 'UPLOADING'
+  | 'ANALYZING'
+  | 'COMPLETED'
+  | 'FAILED'
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+function getTitleFromFileName(fileName: string) {
+  return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传梗图'
+}
+
+function MemeUploadDrawer({
+  open,
+  onClose,
+  onUploaded,
+}: MemeUploadDrawerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>('IDLE')
+  const [progress, setProgress] = useState(0)
+  const uploadTimerRef = useRef<number | null>(null)
+  const analysisTimerRef = useRef<number | null>(null)
+  const progressRef = useRef(0)
+  const cancelledRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true
+
+      if (uploadTimerRef.current !== null) {
+        window.clearInterval(uploadTimerRef.current)
+      }
+
+      if (analysisTimerRef.current !== null) {
+        window.clearTimeout(analysisTimerRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!previewUrl) {
@@ -33,24 +85,103 @@ function MemeUploadDrawer({ open, onClose }: MemeUploadDrawerProps) {
       return false
     }
 
+    cancelledRef.current = false
     setSelectedFile(file)
     setPreviewUrl(URL.createObjectURL(file))
+    setUploadStatus('IDLE')
+    setProgress(0)
     return false
   }
 
   const handleClear = () => {
     setSelectedFile(null)
     setPreviewUrl(null)
+    setUploadStatus('IDLE')
+    setProgress(0)
   }
 
   const handleClose = () => {
+    cancelledRef.current = true
+
+    if (uploadTimerRef.current !== null) {
+      window.clearInterval(uploadTimerRef.current)
+      uploadTimerRef.current = null
+    }
+
+    if (analysisTimerRef.current !== null) {
+      window.clearTimeout(analysisTimerRef.current)
+      analysisTimerRef.current = null
+    }
+
     handleClear()
     onClose()
   }
 
-  const handleMockUpload = () => {
-    message.info('当前是 Mock 阶段，图片暂不会保存到服务器')
+  const finishMockUpload = async () => {
+    if (!selectedFile || cancelledRef.current) {
+      return
+    }
+
+    try {
+      const imageUrl = await fileToDataUrl(selectedFile)
+
+      if (cancelledRef.current) {
+        return
+      }
+
+      const now = new Date().toISOString()
+
+      onUploaded({
+        id: `meme-${Date.now()}`,
+        imageUrl,
+        title: getTitleFromFileName(selectedFile.name),
+        description: 'Mock AI 生成的梗图描述。',
+        tags: ['待整理'],
+        ocrText: '',
+        status: 'COMPLETED',
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      setUploadStatus('COMPLETED')
+      message.success('梗图已加入列表')
+    } catch {
+      setUploadStatus('FAILED')
+      message.error('Mock 上传失败，请重试')
+    }
   }
+
+  const handleMockUpload = () => {
+    if (!selectedFile || uploadStatus !== 'IDLE') {
+      return
+    }
+
+    cancelledRef.current = false
+    progressRef.current = 0
+    setProgress(0)
+    setUploadStatus('UPLOADING')
+
+    uploadTimerRef.current = window.setInterval(() => {
+      const nextProgress = Math.min(progressRef.current + 20, 100)
+      progressRef.current = nextProgress
+      setProgress(nextProgress)
+
+      if (nextProgress === 100) {
+        if (uploadTimerRef.current !== null) {
+          window.clearInterval(uploadTimerRef.current)
+          uploadTimerRef.current = null
+        }
+
+        setUploadStatus('ANALYZING')
+        analysisTimerRef.current = window.setTimeout(() => {
+          void finishMockUpload()
+        }, 1200)
+      }
+    }, 300)
+  }
+
+  const isProcessing =
+    uploadStatus === 'UPLOADING' || uploadStatus === 'ANALYZING'
 
   return (
     <Drawer
@@ -65,6 +196,7 @@ function MemeUploadDrawer({ open, onClose }: MemeUploadDrawerProps) {
           name="meme"
           accept="image/*"
           multiple={false}
+          disabled={isProcessing || uploadStatus === 'COMPLETED'}
           showUploadList={false}
           beforeUpload={handleBeforeUpload}
         >
@@ -87,21 +219,42 @@ function MemeUploadDrawer({ open, onClose }: MemeUploadDrawerProps) {
               <p className="truncate text-sm text-slate-500">
                 {selectedFile.name}
               </p>
-              <Button type="link" danger onClick={handleClear}>
+              <Button
+                type="link"
+                danger
+                disabled={isProcessing}
+                onClick={handleClear}
+              >
                 移除
               </Button>
             </div>
           </div>
         )}
 
+        {uploadStatus === 'UPLOADING' && (
+          <Progress percent={progress} status="active" />
+        )}
+
+        {uploadStatus === 'ANALYZING' && (
+          <Alert message="AI 正在分析图片，请稍候" type="info" showIcon />
+        )}
+
+        {uploadStatus === 'COMPLETED' && (
+          <Alert message="分析完成，梗图已加入列表" type="success" showIcon />
+        )}
+
+        {uploadStatus === 'FAILED' && (
+          <Alert message="处理失败，可以重新尝试上传" type="error" showIcon />
+        )}
+
         <div className="flex justify-end gap-3">
-          <Button onClick={handleClose}>取消</Button>
+          <Button onClick={handleClose}>关闭</Button>
           <Button
             type="primary"
-            disabled={!selectedFile}
+            disabled={!selectedFile || isProcessing || uploadStatus === 'COMPLETED'}
             onClick={handleMockUpload}
           >
-            开始上传
+            {isProcessing ? '处理中...' : '开始上传'}
           </Button>
         </div>
       </div>
