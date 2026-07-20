@@ -57,6 +57,22 @@ function MemeListPage() {
     setMemes((currentMemes) => [meme, ...currentMemes])
   }
 
+  const handleUpdateMeme = (updatedMeme: Meme) => {
+    setMemes((currentMemes) =>
+      currentMemes.map((meme) =>
+        meme.id === updatedMeme.id ? updatedMeme : meme,
+      ),
+    )
+    setSelectedMeme(updatedMeme)
+  }
+
+  const handleDeleteMeme = (memeToDelete: Meme) => {
+    setMemes((currentMemes) =>
+      currentMemes.filter((meme) => meme.id !== memeToDelete.id),
+    )
+    setSelectedMeme(null)
+  }
+
   return (
     <AppLayout>
       <section className="space-y-8">
@@ -87,9 +103,16 @@ function MemeListPage() {
         />
       </section>
       <MemeDetailModal
+        key={
+          selectedMeme
+            ? `${selectedMeme.id}-${selectedMeme.updatedAt}`
+            : 'empty'
+        }
         meme={selectedMeme}
         open={selectedMeme !== null}
         onClose={() => setSelectedMeme(null)}
+        onUpdate={handleUpdateMeme}
+        onDelete={handleDeleteMeme}
       />
       <MemeUploadDrawer
         open={uploadOpen}
