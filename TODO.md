@@ -78,10 +78,10 @@ PostgreSQL Docker 容器已启动
 
 ### 后端数据库
 
-- [ ] 创建 `server/.env`。
-- [ ] 配置 `DATABASE_URL`。
-- [ ] 安装 `prisma@6` 和 `@prisma/client@6`。
-- [ ] 执行 `prisma init`。
+- [x] 创建 `server/.env`。
+- [x] 配置 `DATABASE_URL`。
+- [x] 安装 `prisma@6` 和 `@prisma/client@6`。
+- [x] 完成 Prisma 基础初始化，创建 `server/prisma/schema.prisma`。
 - [ ] 编写 `server/prisma/schema.prisma`。
 - [ ] 创建 `MemeStatus` 枚举。
 - [ ] 创建 `Meme` 数据模型。
