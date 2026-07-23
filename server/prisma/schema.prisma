@@ -6,3 +6,25 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum MemeStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Meme {
+  id           String     @id @default(cuid())
+  imageUrl     String
+  title        String     @default("")
+  description  String     @default("")
+  tags         String[]   @default([])
+  ocrText      String     @default("")
+  status       MemeStatus @default(PROCESSING)
+  errorMessage String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}

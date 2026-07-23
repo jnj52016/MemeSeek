@@ -13,8 +13,12 @@
         ↓
 PostgreSQL Docker 容器已启动
         ↓
-下一步：Prisma + Meme 数据库模型
+Prisma + Meme 数据库模型和首次迁移已完成
+        ↓
+下一步：Prisma Module 和 Prisma Service
 ```
+
+说明：数据库迁移和后端构建已通过；Prisma Client 生成因当前环境无法访问 Prisma 引擎下载地址，暂未完成。
 
 ## 二、已完成内容
 
@@ -82,10 +86,10 @@ PostgreSQL Docker 容器已启动
 - [x] 配置 `DATABASE_URL`。
 - [x] 安装 `prisma@6` 和 `@prisma/client@6`。
 - [x] 完成 Prisma 基础初始化，创建 `server/prisma/schema.prisma`。
-- [ ] 编写 `server/prisma/schema.prisma`。
-- [ ] 创建 `MemeStatus` 枚举。
-- [ ] 创建 `Meme` 数据模型。
-- [ ] 执行数据库迁移。
+- [x] 编写 `server/prisma/schema.prisma`。
+- [x] 创建 `MemeStatus` 枚举。
+- [x] 创建 `Meme` 数据模型。
+- [x] 执行数据库迁移。
 - [ ] 创建 Prisma Module 和 Prisma Service。
 
 ### 后端接口
