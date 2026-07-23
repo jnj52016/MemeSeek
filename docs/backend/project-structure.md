@@ -32,11 +32,15 @@ server/
 │  │  ├─ migration_lock.toml
 │  │  └─ 20260723213215_init/
 │  │     └─ migration.sql
-│  └─ .env                        # 本地数据库连接，不能提交到 Git
+│
+├─ .env                           # 本地数据库连接，不能提交到 Git
 │
 ├─ src/
 │  ├─ main.ts                     # NestJS 启动入口
 │  ├─ app.module.ts               # 根模块
+│  ├─ prisma/
+│  │  ├─ prisma.module.ts         # 全局 Prisma 模块
+│  │  └─ prisma.service.ts        # PrismaClient 生命周期管理
 │  ├─ app.controller.ts           # 当前示例 Controller
 │  ├─ app.service.ts              # 当前示例 Service
 │  └─ app.controller.spec.ts      # 当前示例单元测试

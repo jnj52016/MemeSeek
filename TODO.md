@@ -15,10 +15,12 @@ PostgreSQL Docker 容器已启动
         ↓
 Prisma + Meme 数据库模型和首次迁移已完成
         ↓
-下一步：Prisma Module 和 Prisma Service
+Prisma Module 和 Prisma Service 已完成
+        ↓
+下一步：Memes Module、Controller 和 Service
 ```
 
-说明：数据库迁移和后端构建已通过；Prisma Client 生成因当前环境无法访问 Prisma 引擎下载地址，暂未完成。
+说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
 
 ## 二、已完成内容
 
@@ -90,7 +92,7 @@ Prisma + Meme 数据库模型和首次迁移已完成
 - [x] 创建 `MemeStatus` 枚举。
 - [x] 创建 `Meme` 数据模型。
 - [x] 执行数据库迁移。
-- [ ] 创建 Prisma Module 和 Prisma Service。
+- [x] 创建 Prisma Module 和 Prisma Service。
 
 ### 后端接口
 

@@ -2,16 +2,16 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP，以及 Prisma Schema 和首次数据库迁移，正在进入 NestJS 数据库服务接入阶段。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移和 NestJS Prisma 数据库服务接入，正在进入 Meme CRUD 开发阶段。
 
 当前下一步：
 
 ```text
 Prisma Schema 和数据库迁移已完成
   ↓
-创建 PrismaModule 和 PrismaService
+PrismaModule 和 PrismaService 已完成
   ↓
-创建 MemesModule、Controller、Service
+下一步：创建 MemesModule、Controller、Service
 ```
 
 ## 二、已经完成的内容
@@ -91,7 +91,6 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 ## 四、当前未完成的内容
 
-- NestJS Prisma Module 和 Service。
 - NestJS Prisma Module 和 Service。
 - Meme CRUD 接口。
 - Swagger 文档。
