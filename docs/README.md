@@ -24,6 +24,8 @@ docs/
 
 ## 当前文档
 
+- [项目开发计划](./project-plan.md)
+- [当前项目状态](./project-status.md)
 - [项目架构学习指南](./project-architecture-guide.md)
 - [前端项目结构](./frontend/project-structure.md)
 - [React Router 配置教程](./frontend/react-router-setup.md)
