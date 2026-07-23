@@ -1,5 +1,5 @@
 //梗图库页面
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import MemeDetailModal from '../features/memes/components/MemeDetailModal'
 import MemeUploadDrawer from '../features/memes/components/MemeUploadDrawer'
@@ -11,18 +11,43 @@ import { mockMemes } from '../mocks/memes'
 
 
 function MemeListPage() {
+  // URL 搜索参数：负责读取和更新地址栏中的 ?q=关键词。
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // 页面交互状态：当前选中的梗图、上传抽屉是否打开。
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+
+  // memes 是当前页面维护的梗图列表，Mock 阶段暂时从 mockMemes 开始。
   const [memes, setMemes] = useState<Meme[]>(mockMemes)
+
+  // inputValue 是搜索框正在输入的内容，避免中文输入法输入过程中 URL 频繁变化。
   const [inputValue, setInputValue] = useState(
     () => searchParams.get('q') ?? '',
   )
+
+  // Mock 加载状态：以后由 TanStack Query 的 isPending 替代。
+  const [isLoading, setIsLoading] = useState(true)
+
+  // searchKeyword 是从 URL 读取的最终搜索关键词。
   const searchKeyword = searchParams.get('q') ?? ''
 
+  // Mock 阶段模拟一次初始加载，接入 TanStack Query 后由 query.isPending 接管。
+  useEffect(() => {
+    const loadingTimer = window.setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+
+    return () => window.clearTimeout(loadingTimer)
+  }, [])
+
+  // normalizedKeyword 是清除首尾空格并转为小写后的关键词，用于匹配。
   const normalizedKeyword = searchKeyword.trim().toLowerCase()
+
+  // filteredMemes 是根据搜索关键词筛选后，真正交给网格展示的列表。
   const filteredMemes = normalizedKeyword
     ? memes.filter((meme) => {
+        // searchableText 汇总标题、描述、OCR 文字和标签，作为统一搜索文本。
         const searchableText = [
           meme.title,
           meme.description,
@@ -98,8 +123,11 @@ function MemeListPage() {
 
         <MemeGrid
           memes={filteredMemes}
+          loading={isLoading}
+          hasSearchKeyword={Boolean(normalizedKeyword)}
           onUpload={() => setUploadOpen(true)}
           onSelect={setSelectedMeme}
+          onClearSearch={handleClearSearch}
         />
       </section>
       <MemeDetailModal

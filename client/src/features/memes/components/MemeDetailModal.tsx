@@ -1,5 +1,13 @@
 // 梗图详情弹窗，支持查看和编辑梗图信息。
-import { Button, Input, message, Modal, Popconfirm, Tag } from 'antd'
+import {
+  Alert,
+  Button,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Tag,
+} from 'antd'
 import { useState } from 'react'
 import type { Meme, MemeStatus } from '../../../types/meme'
 
@@ -11,6 +19,7 @@ type MemeDetailModalProps = {
   onDelete: (meme: Meme) => void
 }
 
+// statusText 把梗图状态值转换成详情弹窗中的中文说明。
 const statusText: Record<MemeStatus, string> = {
   PROCESSING: '分析中',
   COMPLETED: '分析完成',
@@ -24,6 +33,7 @@ function MemeDetailModal({
   onUpdate,
   onDelete,
 }: MemeDetailModalProps) {
+  // 编辑状态和表单草稿：只在用户点击“编辑信息”后使用。
   const [isEditing, setIsEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(meme?.title ?? '')
   const [draftDescription, setDraftDescription] = useState(
@@ -207,6 +217,14 @@ function MemeDetailModal({
               <p className="text-sm text-slate-700">
                 {statusText[meme.status]}
               </p>
+              {meme.status === 'FAILED' && (
+                <Alert
+                  className="mt-3"
+                  type="error"
+                  showIcon
+                  message={meme.errorMessage ?? 'AI 分析失败，请稍后重试。'}
+                />
+              )}
             </div>
 
             {!isEditing && (

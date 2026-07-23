@@ -1,3 +1,7 @@
+//这个是一个用于上传梗图的抽屉组件
+// 使用了 Ant Design 的 Drawer、Upload、Progress 和 Alert 组件。
+// 用户可以通过拖拽或点击上传图片，组件会显示图片预览，并模拟上传和 AI 分析的过程。
+// 上传状态包括空闲、上传中、分析中、完成和失败，每个状态对应不同的提示和按钮状态。
 import { InboxOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -17,6 +21,7 @@ type MemeUploadDrawerProps = {
   onUploaded: (meme: Meme) => void
 }
 
+// 上传流程的状态机：每个状态对应抽屉中的不同提示和按钮状态。
 type UploadStatus =
   | 'IDLE'
   | 'UPLOADING'
@@ -43,10 +48,19 @@ function MemeUploadDrawer({
   onClose,
   onUploaded,
 }: MemeUploadDrawerProps) {
+  // selectedFile 是用户当前选择、准备上传的图片文件。
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  // previewUrl 是本地生成的临时预览地址，不是后端图片地址。
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  // uploadStatus 控制上传进度、AI 分析中、成功和失败等页面状态。
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('IDLE')
+
+  // progress 保存模拟上传进度，取值范围为 0 到 100。
   const [progress, setProgress] = useState(0)
+
+  // 下面的 Ref 保存定时器和流程控制值，避免定时器变化触发重新渲染。
   const uploadTimerRef = useRef<number | null>(null)
   const analysisTimerRef = useRef<number | null>(null)
   const progressRef = useRef(0)
@@ -180,6 +194,7 @@ function MemeUploadDrawer({
     }, 300)
   }
 
+  // isProcessing 用于统一控制上传过程中的禁用状态。
   const isProcessing =
     uploadStatus === 'UPLOADING' || uploadStatus === 'ANALYZING'
 
