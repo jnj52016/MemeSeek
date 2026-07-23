@@ -1,15 +1,11 @@
 /**
  * AI 分析设置
- * @property prompt 分析梗图时使用的提示词
- * @property recommendedTags AI 推荐使用的标签列表
- * @property model 当前使用的 AI 模型名称
- * @property apiBaseUrl AI 服务的 API 地址
- * @property isApiKeyConfigured 服务端是否已经配置 API Key
+ * @property recommendedTags AI 推荐使用的标签列表。
+ * @property model 当前使用的 DeepSeek 模型名称。
+ * @property apiKey DeepSeek API Key，仅供个人本地使用。
  */
 export type AiSettings = {
-  prompt: string
   recommendedTags: string[]
   model: string
-  apiBaseUrl: string
-  isApiKeyConfigured: boolean
+  apiKey: string
 }

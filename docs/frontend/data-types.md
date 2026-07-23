@@ -161,11 +161,9 @@ const completedMeme: Meme = {
 
 AI 设置页面需要：
 
-- 提示词
 - 推荐标签
 - 使用的模型
-- API 地址
-- API Key 是否已经配置
+- DeepSeek API Key
 
 在：
 
@@ -177,15 +175,15 @@ client/src/types/ai-settings.ts
 
 ```ts
 export type AiSettings = {
-  prompt: string
   recommendedTags: string[]
   model: string
-  apiBaseUrl: string
-  isApiKeyConfigured: boolean
+  apiKey: string
 }
 ```
 
-注意：不要添加真实的 `apiKey` 字段。API Key 应该保存在后端环境变量中，前端只能知道它是否已经配置。
+当前项目是个人本地工具，所以 API Key 会由用户在前端输入，并保存在当前浏览器的 `localStorage` 中。
+
+如果以后公开部署给其他人使用，就不能继续把真实 API Key 保存在前端，而应该改为由后端保存和调用。
 
 ## 八、如何判断字段是否应该添加
 
