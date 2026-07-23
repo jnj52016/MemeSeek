@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移和 NestJS Prisma 数据库服务接入，正在进入 Meme CRUD 开发阶段。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入和 Meme CRUD 接口，下一阶段进入 Swagger 与前后端真实联调。
 
 当前下一步：
 
@@ -11,7 +11,7 @@ Prisma Schema 和数据库迁移已完成
   ↓
 PrismaModule 和 PrismaService 已完成
   ↓
-下一步：创建 MemesModule、Controller、Service
+下一步：配置 Swagger，并开始前后端真实联调
 ```
 
 ## 二、已经完成的内容
@@ -91,8 +91,6 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 ## 四、当前未完成的内容
 
-- NestJS Prisma Module 和 Service。
-- Meme CRUD 接口。
 - Swagger 文档。
 - 前后端真实联调。
 - DeepSeek 后端调用。
@@ -101,31 +99,23 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 ## 五、下一步操作记录
 
-### 下一步一：配置后端数据库环境变量
+### 已完成：Meme CRUD
 
-在 `server/.env` 中准备：
+已完成 `MemesModule`、Controller、Service、DTO 和全局请求校验，并实现：
 
-```env
-DATABASE_URL="postgresql://memeseek:memeseek_dev_password@localhost:5432/memeseek?schema=public"
+```text
+POST   /memes
+GET    /memes
+GET    /memes/:id
+PATCH  /memes/:id
+DELETE /memes/:id
 ```
 
-### 下一步二：安装 Prisma
+`GET /memes` 当前支持关键词搜索、状态筛选和分页，JSON CRUD 已通过构建、测试和数据库接口冒烟验证。
 
-进入项目根目录，安装到 `server`：
+### 下一步：Swagger 与前后端联调
 
-```powershell
-pnpm --filter server add @prisma/client@6
-pnpm --filter server add -D prisma@6
-```
-
-### 下一步三：初始化 Prisma
-
-```powershell
-cd server
-pnpm exec prisma init
-```
-
-然后编写 `server/prisma/schema.prisma`。
+先配置 Swagger 固定请求和响应结构，再将前端 Mock 数据替换为真实 API，最后处理图片上传。
 
 ## 六、新对话开始时使用的提示词
 

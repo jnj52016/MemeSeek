@@ -17,7 +17,7 @@ Prisma + Meme 数据库模型和首次迁移已完成
         ↓
 Prisma Module 和 Prisma Service 已完成
         ↓
-下一步：Memes Module、Controller 和 Service
+下一步：Swagger 配置与前后端真实联调
 ```
 
 说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
@@ -96,16 +96,16 @@ Prisma Module 和 Prisma Service 已完成
 
 ### 后端接口
 
-- [ ] 创建 Memes Module。
-- [ ] 创建 Memes Controller。
-- [ ] 创建 Memes Service。
-- [ ] 创建新增、修改和查询 DTO。
-- [ ] 配置 `class-validator`。
-- [ ] 实现 `POST /memes`。
-- [ ] 实现 `GET /memes`。
-- [ ] 实现 `GET /memes/:id`。
-- [ ] 实现 `PATCH /memes/:id`。
-- [ ] 实现 `DELETE /memes/:id`。
+- [x] 创建 Memes Module。
+- [x] 创建 Memes Controller。
+- [x] 创建 Memes Service。
+- [x] 创建新增、修改和查询 DTO。
+- [x] 配置 `class-validator`。
+- [x] 实现 `POST /memes`。
+- [x] 实现 `GET /memes`。
+- [x] 实现 `GET /memes/:id`。
+- [x] 实现 `PATCH /memes/:id`。
+- [x] 实现 `DELETE /memes/:id`。
 - [ ] 配置图片本地保存和静态访问。
 
 ### Swagger 和前后端联调
@@ -152,39 +152,18 @@ Prisma Module 和 Prisma Service 已完成
 - 流式请求以后用于自然语言搜索或长文本生成。
 - 当前还需要确认 DeepSeek 使用的模型是否支持图片输入，必要时增加视觉模型。
 
-## 五、下一步：只做后端数据库初始化
+## 五、当前阶段：Swagger 与前后端联调
 
-不要现在修改前端页面，也不要先接 DeepSeek。
+Meme CRUD、请求 DTO 和全局参数校验已经完成，并已通过后端构建、测试和数据库接口冒烟验证。
 
-### 1. 创建 `server/.env`
+下一步按以下顺序继续：
 
-```env
-DATABASE_URL="postgresql://memeseek:memeseek_dev_password@localhost:5432/memeseek?schema=public"
-```
+1. 配置 Swagger，固定请求和响应结构。
+2. 安装并配置 `openapi-typescript`、`openapi-fetch`。
+3. 创建统一 API Client，将前端 Mock 列表替换为真实 `GET /memes`。
+4. 接通前端搜索、编辑、删除和上传流程。
 
-### 2. 安装 Prisma
-
-在项目根目录执行：
-
-```powershell
-pnpm --filter server add @prisma/client@6
-pnpm --filter server add -D prisma@6
-```
-
-### 3. 初始化 Prisma
-
-```powershell
-cd server
-pnpm exec prisma init
-```
-
-### 4. 然后编写
-
-```text
-server/prisma/schema.prisma
-```
-
-先创建 `Meme` 表和 `MemeStatus` 枚举，再执行数据库迁移。
+本阶段仍然先不接 DeepSeek，图片上传可以在基础 CRUD 联调稳定后再实现。
 
 ## 六、新对话启动提示词
 
@@ -199,7 +178,7 @@ server/prisma/schema.prisma
 3. docs/project-architecture-guide.md
 
 请检查当前项目的 git status，并根据 TODO.md 的“下一步”继续。
-当前只做后端数据库初始化，不要修改前端页面，也不要接 DeepSeek。
+当前继续做 Swagger 和前后端真实联调，不要先接 DeepSeek。
 先告诉我准备做什么，等我确认后再执行。
 ```
 
