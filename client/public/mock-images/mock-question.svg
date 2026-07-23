@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title">
+  <title id="title">这合理吗</title>
+  <rect width="800" height="600" rx="32" fill="#FCE7F3"/>
+  <circle cx="400" cy="245" r="120" fill="#FDA4AF"/>
+  <circle cx="355" cy="225" r="14" fill="#334155"/>
+  <circle cx="445" cy="225" r="14" fill="#334155"/>
+  <text x="400" y="305" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="100" font-weight="700" fill="#334155">?</text>
+  <text x="400" y="500" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="48" font-weight="700" fill="#0F172A">这合理吗</text>
+</svg>

@@ -2,8 +2,8 @@
 import { useState } from 'react'
 import { Button, Input, message, Select, Tag } from 'antd'
 import AppLayout from '../components/AppLayout'
+import { defaultAiSettings } from '../mocks/ai-settings'
 import {
-  defaultAiSettings,
   loadAiSettings,
   saveAiSettings,
 } from '../services/ai-settings-storage'

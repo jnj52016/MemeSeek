@@ -1,14 +1,8 @@
 import type { AiSettings } from '../types/ai-settings'
+import { defaultAiSettings } from '../mocks/ai-settings'
 
 // localStorage 使用的固定名称，避免不同页面使用不同的 Key。
 const AI_SETTINGS_STORAGE_KEY = 'memeseek-ai-settings'
-
-// AI 设置的初始默认值。
-export const defaultAiSettings: AiSettings = {
-  recommendedTags: ['猫', '动物', '表情', '吐槽', '日常'],
-  model: 'deepseek-chat',
-  apiKey: '',
-}
 
 // 从浏览器读取 AI 设置；没有数据或数据格式错误时使用默认值。
 export function loadAiSettings(): AiSettings {
