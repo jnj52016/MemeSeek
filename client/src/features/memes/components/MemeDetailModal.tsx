@@ -15,8 +15,8 @@ type MemeDetailModalProps = {
   meme: Meme | null
   open: boolean
   onClose: () => void
-  onUpdate: (meme: Meme) => void
-  onDelete: (meme: Meme) => void
+  onUpdate: (meme: Meme) => void | Promise<void>
+  onDelete: (meme: Meme) => void | Promise<void>
 }
 
 // statusText 把梗图状态值转换成详情弹窗中的中文说明。
@@ -41,6 +41,7 @@ function MemeDetailModal({
   )
   const [draftTags, setDraftTags] = useState<string[]>(meme?.tags ?? [])
   const [newTag, setNewTag] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleStartEditing = () => {
     if (!meme) {
@@ -72,7 +73,7 @@ function MemeDetailModal({
     )
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!meme) {
       return
     }
@@ -92,18 +93,38 @@ function MemeDetailModal({
       updatedAt: new Date().toISOString(),
     }
 
-    setIsEditing(false)
-    onUpdate(updatedMeme)
-    message.success('梗图信息已更新')
+    setIsSubmitting(true)
+
+    try {
+      await onUpdate(updatedMeme)
+      setIsEditing(false)
+      message.success('梗图信息已更新')
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : '梗图信息更新失败，请稍后重试。',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!meme) {
       return
     }
 
-    onDelete(meme)
-    message.success('梗图已删除')
+    setIsSubmitting(true)
+
+    try {
+      await onDelete(meme)
+      message.success('梗图已删除')
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : '梗图删除失败，请稍后重试。',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -176,7 +197,11 @@ function MemeDetailModal({
 
                 <div className="flex justify-end gap-3">
                   <Button onClick={() => setIsEditing(false)}>取消</Button>
-                  <Button type="primary" onClick={handleSave}>
+                  <Button
+                    type="primary"
+                    loading={isSubmitting}
+                    onClick={handleSave}
+                  >
                     保存
                   </Button>
                 </div>
@@ -234,7 +259,7 @@ function MemeDetailModal({
                   description="删除后无法恢复。"
                   okText="确认删除"
                   cancelText="取消"
-                  okButtonProps={{ danger: true }}
+                  okButtonProps={{ danger: true, loading: isSubmitting }}
                   onConfirm={handleConfirmDelete}
                 >
                   <Button danger>删除梗图</Button>

@@ -17,7 +17,7 @@ Prisma + Meme 数据库模型和首次迁移已完成
         ↓
 Prisma Module 和 Prisma Service 已完成
         ↓
-下一步：使用 TanStack Query 替换 Mock 列表数据
+下一步：接通图片上传流程
 ```
 
 说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
@@ -116,7 +116,7 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 安装 `openapi-fetch`。
 - [x] 生成前端 API 类型。
 - [x] 创建统一 API Client。
-- [ ] 使用 TanStack Query 替换 Mock 列表数据。
+- [x] 使用 TanStack Query 替换 Mock 列表数据。
 - [ ] 跑通上传、查询、编辑和删除流程。
 
 ### AI 功能
@@ -154,13 +154,12 @@ Prisma Module 和 Prisma Service 已完成
 
 ## 五、当前阶段：前端真实联调
 
-Meme CRUD、请求 DTO、全局参数校验、Swagger 文档和前端 OpenAPI Client 已完成，并已通过前后端构建验证。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client 和列表真实联调已完成，并已通过前后端构建和接口验证。
 
 下一步按以下顺序继续：
 
-1. 使用 TanStack Query 将前端 Mock 列表替换为真实 `GET /memes`。
-2. 接通前端搜索、编辑和删除流程。
-3. 最后处理图片上传流程。
+1. 接通图片上传流程，并将上传文件保存到后端。
+2. 将上传成功后的记录刷新到 TanStack Query 列表。
 
 本阶段仍然先不接 DeepSeek，图片上传可以在基础 CRUD 联调稳定后再实现。
 

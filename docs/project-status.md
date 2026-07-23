@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档和前端 OpenAPI Client，下一阶段进入真实数据联调。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client 和列表真实联调，下一阶段进入图片上传。
 
 当前下一步：
 
@@ -11,7 +11,7 @@ Prisma Schema 和数据库迁移已完成
   ↓
 PrismaModule 和 PrismaService 已完成
   ↓
-下一步：使用 TanStack Query 替换 Mock 列表数据
+下一步：接通图片上传流程
 ```
 
 ## 二、已经完成的内容
@@ -98,7 +98,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 ## 五、下一步操作记录
 
-### 已完成：Meme CRUD、Swagger 和前端 API Client
+### 已完成：Meme CRUD、Swagger、前端 API Client 和列表联调
 
 已完成 `MemesModule`、Controller、Service、DTO 和全局请求校验，并实现：
 
@@ -116,9 +116,9 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 前端类型生成文件为 `client/src/api/generated.ts`，统一 API Client 为 `client/src/services/api-client.ts`。
 
-### 下一步：TanStack Query 真实联调
+### 下一步：图片上传
 
-先将前端 Mock 列表替换为真实 `GET /memes`，再接通搜索、编辑、删除和图片上传。
+接通 `POST /memes` 的 multipart 文件上传，保存图片并将新记录刷新到 TanStack Query 列表。
 
 ## 六、新对话开始时使用的提示词
 

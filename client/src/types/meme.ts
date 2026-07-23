@@ -19,7 +19,7 @@ export type Meme = {
   tags: string[]
   ocrText: string
   status: MemeStatus
-  errorMessage?: string
+  errorMessage?: string | null
   createdAt: string
   updatedAt: string
 }
