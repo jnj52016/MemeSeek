@@ -17,7 +17,7 @@ Prisma + Meme 数据库模型和首次迁移已完成
         ↓
 Prisma Module 和 Prisma Service 已完成
         ↓
-下一步：Swagger 配置与前后端真实联调
+下一步：使用 TanStack Query 替换 Mock 列表数据
 ```
 
 说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
@@ -110,12 +110,12 @@ Prisma Module 和 Prisma Service 已完成
 
 ### Swagger 和前后端联调
 
-- [ ] 配置 Swagger。
-- [ ] 检查请求参数和响应类型。
-- [ ] 安装 `openapi-typescript`。
-- [ ] 安装 `openapi-fetch`。
-- [ ] 生成前端 API 类型。
-- [ ] 创建统一 API Client。
+- [x] 配置 Swagger。
+- [x] 检查请求参数和响应类型。
+- [x] 安装 `openapi-typescript`。
+- [x] 安装 `openapi-fetch`。
+- [x] 生成前端 API 类型。
+- [x] 创建统一 API Client。
 - [ ] 使用 TanStack Query 替换 Mock 列表数据。
 - [ ] 跑通上传、查询、编辑和删除流程。
 
@@ -152,16 +152,15 @@ Prisma Module 和 Prisma Service 已完成
 - 流式请求以后用于自然语言搜索或长文本生成。
 - 当前还需要确认 DeepSeek 使用的模型是否支持图片输入，必要时增加视觉模型。
 
-## 五、当前阶段：Swagger 与前后端联调
+## 五、当前阶段：前端真实联调
 
-Meme CRUD、请求 DTO 和全局参数校验已经完成，并已通过后端构建、测试和数据库接口冒烟验证。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档和前端 OpenAPI Client 已完成，并已通过前后端构建验证。
 
 下一步按以下顺序继续：
 
-1. 配置 Swagger，固定请求和响应结构。
-2. 安装并配置 `openapi-typescript`、`openapi-fetch`。
-3. 创建统一 API Client，将前端 Mock 列表替换为真实 `GET /memes`。
-4. 接通前端搜索、编辑、删除和上传流程。
+1. 使用 TanStack Query 将前端 Mock 列表替换为真实 `GET /memes`。
+2. 接通前端搜索、编辑和删除流程。
+3. 最后处理图片上传流程。
 
 本阶段仍然先不接 DeepSeek，图片上传可以在基础 CRUD 联调稳定后再实现。
 
@@ -178,7 +177,7 @@ Meme CRUD、请求 DTO 和全局参数校验已经完成，并已通过后端构
 3. docs/project-architecture-guide.md
 
 请检查当前项目的 git status，并根据 TODO.md 的“下一步”继续。
-当前继续做 Swagger 和前后端真实联调，不要先接 DeepSeek。
+当前继续做前端真实联调，不要先接 DeepSeek。
 先告诉我准备做什么，等我确认后再执行。
 ```
 

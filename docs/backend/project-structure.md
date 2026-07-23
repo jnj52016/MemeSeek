@@ -4,7 +4,7 @@
 
 MemeSeek 后端使用 NestJS，负责提供 HTTP API、保存梗图数据、管理图片文件，以及在后续阶段调用 DeepSeek 完成图片分析。
 
-当前后端已经完成 PostgreSQL、Prisma Schema、首次数据库迁移和 Meme CRUD 接口，下一阶段是 Swagger 与前后端真实联调。
+当前后端已经完成 PostgreSQL、Prisma Schema、首次数据库迁移、Meme CRUD 接口和 Swagger 文档，下一阶段是前端真实联调。
 
 后端的核心调用关系如下：
 
