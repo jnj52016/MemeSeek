@@ -23,7 +23,9 @@ Prisma Module 和 Prisma Service 已完成
         ↓
 前端 5 个关键自动化测试已完成
         ↓
-下一步：补充后端接口测试和 AI 失败状态测试
+后端接口测试和 AI 失败状态测试已完成
+        ↓
+下一步：创建后端 AI Module 和 AI Service
 ```
 
 说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
@@ -141,7 +143,8 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 完成至少 5 个有价值的前端测试。
 - [x] 测试搜索和 URL 参数。
 - [x] 测试上传失败状态。
-- [ ] 测试 AI 分析失败状态。
+- [x] 测试 AI 分析失败状态。
+- [x] 完成后端 Meme API E2E 测试，覆盖上传、查询、编辑、删除、静态文件和错误响应。
 - [x] 测试编辑和删除流程。
 - [ ] 完善 README。
 - [ ] 添加项目截图、架构图和流程图。
@@ -158,19 +161,25 @@ Prisma Module 和 Prisma Service 已完成
 - 流式请求以后用于自然语言搜索或长文本生成。
 - 当前还需要确认 DeepSeek 使用的模型是否支持图片输入，必要时增加视觉模型。
 
-## 五、当前阶段：自动化测试补充
+## 五、当前阶段：AI 后端服务接入准备
 
-Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证和 5 个前端自动化测试已完成。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证、后端接口 E2E 测试和前端自动化测试已完成。
 
 图片上传已接通：后端通过 `POST /memes` 接收 multipart 文件，保存到 `server/uploads/memes/`，并通过 `/uploads/memes/...` 提供静态访问；前端上传成功后会刷新 TanStack Query 列表。
 
+本阶段已完成以下验证：
+
+- 后端 E2E 测试覆盖上传、查询筛选、编辑、删除、静态图片访问、参数校验和 404 响应。
+- 前端测试覆盖 AI 分析失败状态及错误信息展示。
+- 前后端生产构建均已通过。
+
 下一步按以下顺序继续：
 
-1. 补充后端上传、编辑、删除和错误响应测试。
-2. 补充 AI 分析失败状态测试。
-3. 测试通过后，再开始接入 DeepSeek 后端 AI Service。
+1. 创建后端 AI Module 和 AI Service。
+2. 固定默认分析提示词，并设计 AI 返回 JSON 的校验结构。
+3. 确认 DeepSeek 使用的模型是否支持图片输入，再接入非流式 API 调用。
 
-本阶段仍然先不接 DeepSeek。由于 AI 尚未接入，真实上传创建的 Meme 暂时标记为 `COMPLETED`，接入 AI 后再改为 `PROCESSING` → `COMPLETED/FAILED`。
+由于 AI 尚未接入，真实上传创建的 Meme 暂时标记为 `COMPLETED`，接入 AI 后再改为 `PROCESSING` → `COMPLETED/FAILED`。
 
 ## 六、新对话启动提示词
 
@@ -185,7 +194,7 @@ Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Cl
 3. docs/project-architecture-guide.md
 
 请检查当前项目的 git status，并根据 TODO.md 的“下一步”继续。
-当前继续做前端真实联调，不要先接 DeepSeek。
+当前测试补充已完成，准备创建后端 AI Module 和 AI Service；先告诉我准备做什么，等我确认后再执行。
 先告诉我准备做什么，等我确认后再执行。
 ```
 

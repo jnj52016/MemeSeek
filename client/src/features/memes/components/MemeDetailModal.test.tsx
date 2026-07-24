@@ -75,4 +75,23 @@ describe('MemeDetailModal', () => {
       expect(onDelete).toHaveBeenCalledWith(meme)
     })
   })
+
+  it('shows the AI analysis failure state and error message', () => {
+    render(
+      <MemeDetailModal
+        meme={{
+          ...meme,
+          status: 'FAILED',
+          errorMessage: 'DeepSeek 请求超时',
+        }}
+        open
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('分析失败')).toBeInTheDocument()
+    expect(screen.getByText('DeepSeek 请求超时')).toBeInTheDocument()
+  })
 })

@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client 和列表真实联调，图片上传代码已接通并完成运行验证，当前进入测试补充阶段。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调和测试补充，图片上传代码已接通并完成运行验证，当前进入 AI 后端服务接入准备阶段。
 
 当前阶段：
 
@@ -17,7 +17,9 @@ POST /memes multipart 上传、文件保存和静态访问已完成
   ↓
 前端 5 个关键自动化测试已完成
   ↓
-下一步：补充后端接口测试和 AI 失败状态测试
+后端接口测试和 AI 失败状态测试已完成
+  ↓
+下一步：创建后端 AI Module 和 AI Service
 ```
 
 ## 二、已经完成的内容
@@ -101,7 +103,8 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 - 上传流程运行验证已完成。
 - DeepSeek 后端调用。
-- 前端 5 个关键测试已完成，后端接口测试和 AI 失败状态测试待补充。
+- 后端 AI Module 和 AI Service。
+- AI 返回 JSON 校验、分析失败处理和重新分析接口。
 
 ## 五、下一步操作记录
 
@@ -128,7 +131,18 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 已接通 `POST /memes` 的 multipart 文件上传。图片保存到 `server/uploads/memes/`，后端通过 `/uploads` 提供静态访问，数据库 `imageUrl` 只保存访问地址；前端上传成功后刷新 TanStack Query 列表。
 
 已启动完整开发环境，验证上传图片可访问，并确认编辑、删除流程以及删除本地图片文件均正常。
-前端搜索 URL、上传失败、编辑和删除测试已完成；下一步补充后端上传、编辑、删除及错误响应测试，测试通过后再接入 DeepSeek。
+前端搜索 URL、上传失败、编辑、删除和 AI 分析失败状态测试已完成；后端 E2E 已覆盖上传、查询、编辑、删除、静态文件和错误响应，下一步开始接入 DeepSeek 后端 AI Service。
+
+### 已完成：后端接口和 AI 失败状态测试
+
+新增 `server/test/memes.e2e-spec.ts`，覆盖：
+
+- multipart 图片上传、静态图片访问和 `COMPLETED` 状态。
+- 关键词、状态和分页查询。
+- 编辑、删除以及删除后资源不可访问。
+- 缺少图片、非图片文件、非法 DTO、非法分页参数和不存在资源的错误响应。
+
+前端 `MemeDetailModal` 已补充 AI `FAILED` 状态及错误信息展示测试。后端 E2E、前端 Vitest 和前后端构建均已通过。
 
 ## 六、新对话开始时使用的提示词
 
@@ -141,7 +155,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 然后检查当前项目的 git status。
 请根据 project-status.md 的“下一步操作记录”继续开发。
-先不要修改代码，先告诉我准备做什么。
+当前准备创建后端 AI Module 和 AI Service；先不要修改代码，先告诉我准备做什么。
 ```
 
 ## 七、更新规则
