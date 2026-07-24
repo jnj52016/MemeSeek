@@ -19,7 +19,9 @@ Prisma Module 和 Prisma Service 已完成
         ↓
 图片上传接口、后端本地保存和前端真实上传流程已完成
         ↓
-下一步：运行环境验证上传、查询、编辑和删除闭环
+运行环境已验证上传、查询、编辑和删除闭环
+        ↓
+下一步：补充上传失败、编辑和删除自动化测试
 ```
 
 说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
@@ -119,7 +121,7 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 生成前端 API 类型。
 - [x] 创建统一 API Client。
 - [x] 使用 TanStack Query 替换 Mock 列表数据。
-- [ ] 跑通上传、查询、编辑和删除流程。
+- [x] 跑通上传、查询、编辑和删除流程。
 
 ### AI 功能
 
@@ -154,17 +156,17 @@ Prisma Module 和 Prisma Service 已完成
 - 流式请求以后用于自然语言搜索或长文本生成。
 - 当前还需要确认 DeepSeek 使用的模型是否支持图片输入，必要时增加视觉模型。
 
-## 五、当前阶段：图片上传闭环
+## 五、当前阶段：自动化测试补充
 
-Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client 和列表真实联调已完成。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调和图片上传运行验证已完成。
 
 图片上传已接通：后端通过 `POST /memes` 接收 multipart 文件，保存到 `server/uploads/memes/`，并通过 `/uploads/memes/...` 提供静态访问；前端上传成功后会刷新 TanStack Query 列表。
 
 下一步按以下顺序继续：
 
-1. 启动 Node.js、PostgreSQL、后端和前端，验证真实上传流程。
-2. 验证上传图片的访问、编辑、删除以及删除图片文件。
-3. 补充上传失败和编辑删除测试。
+1. 补充上传失败、编辑和删除自动化测试。
+2. 补充搜索 URL、上传失败和 AI 失败状态的前端测试。
+3. 测试通过后，再开始接入 DeepSeek 后端 AI Service。
 
 本阶段仍然先不接 DeepSeek。由于 AI 尚未接入，真实上传创建的 Meme 暂时标记为 `COMPLETED`，接入 AI 后再改为 `PROCESSING` → `COMPLETED/FAILED`。
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button } from 'antd'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import AppLayout from '../components/AppLayout'
 import MemeDetailModal from '../features/memes/components/MemeDetailModal'
@@ -20,16 +20,9 @@ function MemeListPage() {
   const queryClient = useQueryClient()
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
-  const [inputValue, setInputValue] = useState(
-    () => searchParams.get('q') ?? '',
-  )
 
   const searchKeyword = searchParams.get('q') ?? ''
   const normalizedKeyword = searchKeyword.trim().toLowerCase()
-
-  useEffect(() => {
-    setInputValue(searchKeyword)
-  }, [searchKeyword])
 
   const memesQuery = useQuery({
     queryKey: ['memes', normalizedKeyword],
@@ -69,7 +62,6 @@ function MemeListPage() {
   }
 
   const handleClearSearch = () => {
-    setInputValue('')
     handleSearch('')
   }
 
@@ -112,8 +104,8 @@ function MemeListPage() {
         </div>
 
         <MemeSearchBar
-          value={inputValue}
-          onChange={setInputValue}
+          key={searchKeyword}
+          initialValue={searchKeyword}
           onSearch={handleSearch}
           onClear={handleClearSearch}
         />

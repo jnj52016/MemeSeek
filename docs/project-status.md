@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client 和列表真实联调，图片上传代码已接通，当前进入运行验证。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client 和列表真实联调，图片上传代码已接通并完成运行验证，当前进入测试补充阶段。
 
 当前阶段：
 
@@ -13,7 +13,9 @@ PrismaModule 和 PrismaService 已完成
   ↓
 POST /memes multipart 上传、文件保存和静态访问已完成
   ↓
-下一步：验证上传、查询、编辑和删除闭环
+上传、查询、编辑和删除闭环已验证
+  ↓
+下一步：补充自动化测试
 ```
 
 ## 二、已经完成的内容
@@ -95,7 +97,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 ## 四、当前未完成的内容
 
-- 上传流程运行验证。
+- 上传流程运行验证已完成。
 - DeepSeek 后端调用。
 - 测试。
 
@@ -119,11 +121,12 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 前端类型生成文件为 `client/src/api/generated.ts`，统一 API Client 为 `client/src/services/api-client.ts`。
 
-### 下一步：图片上传
+### 已完成：图片上传闭环
 
 已接通 `POST /memes` 的 multipart 文件上传。图片保存到 `server/uploads/memes/`，后端通过 `/uploads` 提供静态访问，数据库 `imageUrl` 只保存访问地址；前端上传成功后刷新 TanStack Query 列表。
 
-接下来启动完整开发环境，验证上传图片可访问，并确认编辑、删除流程以及删除本地图片文件均正常。
+已启动完整开发环境，验证上传图片可访问，并确认编辑、删除流程以及删除本地图片文件均正常。
+下一步补充上传失败、编辑删除和搜索 URL 的自动化测试，测试通过后再接入 DeepSeek。
 
 ## 六、新对话开始时使用的提示词
 
