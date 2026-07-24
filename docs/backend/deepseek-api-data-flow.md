@@ -1,4 +1,4 @@
-# MemeSeek 中 DeepSeek API 的数据流
+# MemeSeek 中视觉 AI API 的数据流
 
 ## 一、先说结论
 
@@ -11,9 +11,9 @@ MemeSeek 最适合采用下面这条路线：
    ▼
 NestJS 后端
    │
-   │ 使用 API Key 调用 DeepSeek
+   │ 使用 API Key 调用通义千问视觉模型
    ▼
-DeepSeek API
+通义千问 OpenAI 兼容 API
    │
    │ 返回完整结果或分段结果
    ▼
@@ -27,8 +27,8 @@ NestJS 后端
 也就是说，推荐的最终结构是：
 
 ```text
-前端 → 后端 → DeepSeek
-前端 ← 后端 ← DeepSeek
+前端 → 后端 → 通义千问视觉 API
+前端 ← 后端 ← 通义千问视觉 API
 ```
 
 前端负责页面展示，后端负责调用 AI、处理结果和保存数据。
@@ -45,7 +45,7 @@ client/src/services/ai-settings-storage.ts
 浏览器 localStorage
 ```
 
-当前还没有真正调用 DeepSeek API，所以现在的 API Key 只是保存起来，还没有参与请求。
+当前 API Key 会在分析请求时由前端临时传给后端，不保存到数据库。
 
 以后接入后端时，点击“保存设置”可以调用后端接口：
 
@@ -67,9 +67,9 @@ NestJS 后端暂存 API Key
 
 因为这是个人本地工具，API Key 可以由前端输入并更换，不需要每次手动修改 `server/.env`。
 
-## 三、后端如何调用 DeepSeek
+## 三、后端如何调用视觉 AI API
 
-后端调用 DeepSeek 时，API Key 放在请求头中：
+后端调用视觉 AI API 时，API Key 放在请求头中：
 
 ```http
 Authorization: Bearer 你的_DEEPSEEK_API_KEY
@@ -84,12 +84,12 @@ NestJS AiService
         ↓
 发送 Authorization 请求头
         ↓
-POST https://api.deepseek.com/chat/completions
+POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
         ↓
-读取 DeepSeek 返回结果
+读取视觉模型返回结果
 ```
 
-前端不需要直接知道 DeepSeek 的完整请求细节。
+前端不需要直接知道视觉模型的完整请求细节。
 
 ## 四、非流式请求是什么
 
@@ -100,7 +100,7 @@ POST https://api.deepseek.com/chat/completions
       ↓
 后端保存图片，创建 PROCESSING 记录
       ↓
-后端调用 DeepSeek，等待完整结果
+后端调用视觉模型，等待完整结果
       ↓
 后端解析 title、description、tags 等字段
       ↓
@@ -133,20 +133,20 @@ POST https://api.deepseek.com/chat/completions
 ```text
 前端发起请求
       ↓
-后端调用 DeepSeek，设置 stream: true
+后端调用视觉模型，设置 stream: true
       ↓
-DeepSeek 返回第一段内容
+视觉模型返回第一段内容
       ↓
 后端转发第一段内容给前端
       ↓
-DeepSeek 返回第二段内容
+视觉模型返回第二段内容
       ↓
 后端转发第二段内容给前端
       ↓
 前端不断拼接内容并更新页面
 ```
 
-DeepSeek 的流式响应使用 SSE，也就是 Server-Sent Events。响应内容类似：
+视觉模型的流式响应使用 SSE，也就是 Server-Sent Events。响应内容类似：
 
 ```text
 data: {"choices":[{"delta":{"content":"猫"}}]}
@@ -159,7 +159,7 @@ data: [DONE]
 流式数据的路线是：
 
 ```text
-前端 ← SSE ← NestJS ← SSE ← DeepSeek
+前端 ← SSE ← NestJS ← SSE ← 视觉模型
 ```
 
 流式请求适合：
@@ -184,19 +184,19 @@ data: [DONE]
 
 所以第一版不是所有功能都要使用流式请求。
 
-## 七、为什么不建议前端直接调用 DeepSeek
+## 七、为什么不建议前端直接调用视觉 AI API
 
 前端直连的路线是：
 
 ```text
-浏览器前端 → DeepSeek API
+浏览器前端 → 视觉 AI API
 ```
 
 它的优点是代码少、看起来简单，但有这些问题：
 
 - API Key 会暴露在浏览器中。
 - 用户可以在开发者工具中看到请求和 Key。
-- 前端需要自己处理 DeepSeek 返回格式。
+- 前端需要自己处理视觉模型返回格式。
 - API 请求容易受到跨域、限流和重复提交影响。
 - 后端无法统一记录分析失败和调用日志。
 - 不利于展示 NestJS 后端能力。
@@ -204,7 +204,7 @@ data: [DONE]
 个人本地工具可以暂时这样做，但 MemeSeek 的项目目标是展示全栈能力，所以最终仍然建议使用：
 
 ```text
-浏览器前端 → NestJS → DeepSeek
+浏览器前端 → NestJS → 视觉 AI API
 ```
 
 ## 八、API Key 更换应该怎么做
@@ -231,25 +231,17 @@ private currentApiKey = process.env.DEEPSEEK_API_KEY ?? ''
 
 ## 九、梗图图片分析需要特别注意
 
-DeepSeek 的 Chat Completion 接口主要处理文本和结构化文本结果。当前 DeepSeek 官方资料说明，DeepSeek V4 模型本身是文本模型，图片通常需要经过其他视觉模型或图像代理先转换成文字。
-
-因此，MemeSeek 的图片分析可能需要拆成两步：
+通义千问视觉模型支持通过 OpenAI 兼容 Chat Completions 接口接收 `image_url`，可以直接完成梗图的图片理解、OCR 和结构化分析：
 
 ```text
 梗图图片
    ↓
-支持图片输入的视觉模型
+通义千问视觉模型
    ↓
-图片描述 + OCR 文字
-   ↓
-DeepSeek
-   ↓
-标题、标签和使用场景
+标题、描述、标签、OCR 文字
 ```
 
-也可以直接选择一个支持图片输入的多模态模型完成全部分析。
-
-这意味着：只有 DeepSeek API Key，不一定就能完成图片识别。接入 AI 前，需要先确认实际使用的模型是否支持图片输入。
+当前实现直接使用支持图片输入的通义千问视觉模型完成全部分析。
 
 ## 十、MemeSeek 的推荐实现顺序
 
@@ -258,11 +250,11 @@ DeepSeek
         ↓
 第二步：后端增加 AI 设置接口
         ↓
-第三步：后端增加 DeepSeek AiService
+第三步：后端增加视觉 AI AiService
         ↓
 第四步：先用非流式请求测试文本分析
         ↓
-第五步：确认图片识别模型方案
+第五步：确认通义千问视觉模型方案
         ↓
 第六步：接入梗图上传和 AI 分析流程
         ↓
@@ -275,20 +267,19 @@ DeepSeek
 
 ```text
 前端 localStorage API Key
-        ↓ x-deepseek-api-key
+        ↓ x-ai-api-key
 POST /memes/:id/analyze
         ↓
 AiService 设置 PROCESSING
         ↓
-AI_VISION_BASE_URL/chat/completions
+AI_BASE_URL/chat/completions
         ↓
 校验 JSON 并保存 COMPLETED，或保存 FAILED 和 errorMessage
 ```
 
-`AI_VISION_BASE_URL` 必须指向支持图片输入的 OpenAI 兼容视觉模型或图片代理。官方 DeepSeek V4 API 模型是文本模型，不能直接完成图片识别，因此当前代码会在未配置该地址时明确记录分析失败。
+`AI_BASE_URL` 当前配置为通义千问 OpenAI 兼容接口，例如 `https://dashscope.aliyuncs.com/compatible-mode/v1`；代码会自动追加 `/chat/completions`。以后切换到其他 OpenAI 兼容模型时，只需修改 `AI_BASE_URL` 和 `AI_MODEL`。
 
 ## 十二、参考资料
 
-- [DeepSeek Create Chat Completion](https://api-docs.deepseek.com/api/create-chat-completion/)
-- [DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/)
-- [DeepSeek 官方 API 文档](https://api-docs.deepseek.com/api/deepseek-api/)
+- [通义千问 OpenAI 兼容 Chat Completions](https://help.aliyun.com/zh/model-studio/qwen-vl-compatible-with-openai)
+- [通义千问 OpenAI 兼容接口参数](https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-chat-completions)

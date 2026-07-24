@@ -3,7 +3,7 @@ import { Transform, type TransformFnParams } from 'class-transformer';
 import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class AnalyzeMemeDto {
-  @ApiPropertyOptional({ example: 'deepseek-v4-flash' })
+  @ApiPropertyOptional({ example: 'qwen3-vl-plus' })
   @IsOptional()
   @IsString()
   @MaxLength(100)

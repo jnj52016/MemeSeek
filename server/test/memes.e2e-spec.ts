@@ -157,14 +157,14 @@ describe('Memes API (e2e)', () => {
     const memeId = createResponse.body.id;
     createdMemeIds.add(memeId);
 
-    const previousVisionBaseUrl = process.env.AI_VISION_BASE_URL;
-    delete process.env.AI_VISION_BASE_URL;
+    const previousBaseUrl = process.env.AI_BASE_URL;
+    delete process.env.AI_BASE_URL;
 
     try {
       const response = await request(app.getHttpServer())
         .post(`/memes/${memeId}/analyze`)
-        .set('x-deepseek-api-key', 'test-key')
-        .send({ model: 'deepseek-v4-flash' })
+        .set('x-ai-api-key', 'test-key')
+        .send({ model: 'qwen3-vl-plus' })
         .expect(200);
 
       expect(response.body).toEqual(
@@ -173,12 +173,12 @@ describe('Memes API (e2e)', () => {
           status: 'FAILED',
         }),
       );
-      expect(response.body.errorMessage).toContain('AI_VISION_BASE_URL');
+      expect(response.body.errorMessage).toContain('AI_BASE_URL');
     } finally {
-      if (previousVisionBaseUrl === undefined) {
-        delete process.env.AI_VISION_BASE_URL;
+      if (previousBaseUrl === undefined) {
+        delete process.env.AI_BASE_URL;
       } else {
-        process.env.AI_VISION_BASE_URL = previousVisionBaseUrl;
+        process.env.AI_BASE_URL = previousBaseUrl;
       }
     }
   });

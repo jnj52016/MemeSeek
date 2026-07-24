@@ -163,7 +163,7 @@ AI 设置页面需要：
 
 - 推荐标签
 - 使用的模型
-- DeepSeek API Key
+- AI API Key
 
 在：
 

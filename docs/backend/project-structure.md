@@ -2,7 +2,7 @@
 
 ## 一、后端定位
 
-MemeSeek 后端使用 NestJS，负责提供 HTTP API、保存梗图数据、管理图片文件，以及在后续阶段调用 DeepSeek 完成图片分析。
+MemeSeek 后端使用 NestJS，负责提供 HTTP API、保存梗图数据、管理图片文件，以及调用通义千问视觉模型完成图片分析。
 
 当前后端已经完成 PostgreSQL、Prisma Schema、首次数据库迁移、Meme CRUD 接口、Swagger 文档和前端列表真实联调，下一阶段是图片上传。
 
@@ -85,7 +85,7 @@ server/
 │  │  └─ memes.module.ts          # 梗图模块
 │  │
 │  ├─ ai/
-│  │  ├─ ai.service.ts            # DeepSeek 调用和结果解析
+│  │  ├─ ai.service.ts            # 视觉 AI 调用和结果解析
 │  │  └─ ai.module.ts
 │  │
 │  ├─ storage/
@@ -154,7 +154,7 @@ Controller 不直接操作 Prisma，数据库查询统一放到 Service 中。
 
 ### `ai/`
 
-负责 DeepSeek 相关逻辑：
+负责视觉 AI 相关逻辑：
 
 - 固定默认提示词；
 - 组织图片分析请求；
@@ -202,7 +202,7 @@ StorageService 保存文件
    ↓
 创建 Meme，status = PROCESSING
    ↓
-AiService 调用 DeepSeek
+AiService 调用通义千问视觉模型
    ↓
 校验 AI 返回 JSON
    ├─ 成功：保存分析结果，status = COMPLETED
@@ -234,7 +234,7 @@ DELETE /memes/:id    删除梗图
 5. 用 Prisma Studio 或 HTTP 请求验证数据库读写。
 6. 添加 Swagger，固定请求和响应结构。
 7. 创建 `StorageModule`，接入真实图片上传。
-8. 创建 `AiModule`，接入 DeepSeek 和分析状态更新。
+8. 创建 `AiModule`，接入通义千问视觉模型和分析状态更新。
 9. 最后把前端 Mock 数据切换为真实 API。
 
 这个顺序可以让每个阶段都有一条可验证的最小链路：先确认数据库，再确认 API，最后接入图片和 AI。

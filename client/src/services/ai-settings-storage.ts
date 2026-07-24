@@ -18,6 +18,11 @@ export function loadAiSettings(): AiSettings {
 
   try {
     const parsedSettings = JSON.parse(savedSettings) as Partial<AiSettings>
+    const savedModel =
+      typeof parsedSettings.model === 'string' ? parsedSettings.model : ''
+    const model = savedModel.startsWith('deepseek-')
+      ? defaultAiSettings.model
+      : savedModel || defaultAiSettings.model
 
     return {
       recommendedTags: Array.isArray(parsedSettings.recommendedTags)
@@ -25,10 +30,7 @@ export function loadAiSettings(): AiSettings {
             (tag): tag is string => typeof tag === 'string',
           )
         : defaultAiSettings.recommendedTags,
-      model:
-        typeof parsedSettings.model === 'string'
-          ? parsedSettings.model
-          : defaultAiSettings.model,
+      model,
       apiKey:
         typeof parsedSettings.apiKey === 'string'
           ? parsedSettings.apiKey

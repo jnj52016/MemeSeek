@@ -154,7 +154,7 @@ export interface components {
             tags?: string[];
         };
         AnalyzeMemeDto: {
-            /** @example deepseek-v4-flash */
+            /** @example qwen3-vl-plus */
             model?: string;
             /**
              * @example [
@@ -351,8 +351,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 当前本地会话使用的 DeepSeek API Key，不会保存到数据库 */
-                "x-deepseek-api-key": string;
+                /** @description 当前本地会话使用的 AI API Key，不会保存到数据库 */
+                "x-ai-api-key": string;
             };
             path: {
                 /** @description 梗图 ID */

@@ -82,7 +82,7 @@ describe('MemeDetailModal', () => {
         meme={{
           ...meme,
           status: 'FAILED',
-          errorMessage: 'DeepSeek 请求超时',
+          errorMessage: 'AI 请求超时',
         }}
         open
         onClose={vi.fn()}
@@ -92,7 +92,7 @@ describe('MemeDetailModal', () => {
     )
 
     expect(screen.getByText('分析失败')).toBeInTheDocument()
-    expect(screen.getByText('DeepSeek 请求超时')).toBeInTheDocument()
+    expect(screen.getByText('AI 请求超时')).toBeInTheDocument()
   })
 
   it('calls the re-analysis handler for a failed meme', async () => {

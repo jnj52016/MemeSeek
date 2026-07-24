@@ -72,7 +72,7 @@ NestJS MemesService
       ↓
 NestJS AiService
       ↓
-DeepSeek 或其他视觉模型
+通义千问等视觉模型
       ↓
 保存 AI 分析结果
 ```
@@ -278,7 +278,7 @@ Meme 类型、Mock 数据、服务函数
 | 服务端数据 | TanStack Query | 后端返回的梗图列表 |
 | 跨页面状态 | Zustand | 用户界面偏好、批量上传队列 |
 | URL 状态 | React Router | `?q=猫` 搜索关键词 |
-| 本地设置 | `localStorage` 服务 | DeepSeek API Key、模型选择 |
+| 本地设置 | `localStorage` 服务 | AI API Key、模型选择 |
 
 不要把同一份梗图列表同时放进 `useState`、TanStack Query 和 Zustand。
 

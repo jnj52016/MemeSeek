@@ -41,16 +41,16 @@ describe('AiService', () => {
       prisma as unknown as PrismaService,
       storage as unknown as StorageService,
     );
-    process.env.AI_VISION_BASE_URL = 'https://vision.example/v1';
+    process.env.AI_BASE_URL = 'https://vision.example/v1';
   });
 
   afterEach(() => {
-    delete process.env.AI_VISION_BASE_URL;
+    delete process.env.AI_BASE_URL;
     jest.restoreAllMocks();
   });
 
   it('saves validated AI JSON as completed meme metadata', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
           choices: [
@@ -91,6 +91,27 @@ describe('AiService', () => {
           status: MemeStatus.PROCESSING,
         }) as unknown,
       }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://vision.example/v1/chat/completions',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const requestBody = JSON.parse(String(requestInit.body));
+    expect(requestBody).toEqual(
+      expect.objectContaining({
+        model: 'vision-model',
+        response_format: { type: 'json_object' },
+      }),
+    );
+    expect(requestBody.messages[1].content).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'image_url',
+          image_url: { url: 'data:image/png;base64,ZmFrZSBpbW1hZ2U=' },
+        },
+      ]),
     );
   });
 

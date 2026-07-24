@@ -1,6 +1,6 @@
-// AI 设置页面：管理 DeepSeek API Key、模型和推荐标签。
+// AI 设置页面：管理视觉模型 API Key、模型和推荐标签。
 import { useState } from 'react'
-import { Button, Input, message, Select, Tag } from 'antd'
+import { Button, Input, message, Tag } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { defaultAiSettings } from '../mocks/ai-settings'
 import {
@@ -60,27 +60,27 @@ function AiSettingsPage() {
         <div>
           <p className="mb-2 text-sm font-medium text-orange-600">系统设置</p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            DeepSeek AI 设置
+            AI 设置
           </h1>
           <p className="mt-2 text-slate-500">
-            设置 DeepSeek 分析梗图时使用的标签规则和 API Key。
+            配置 OpenAI 兼容 AI 接口使用的模型、API Key 和标签规则。
           </p>
         </div>
 
         {/* AI 设置表单区域 */}
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {/* DeepSeek API Key：仅个人本地使用时保存在浏览器中。 */}
+          {/* AI API Key：仅个人本地使用时保存在浏览器中。 */}
           <div>
             <label
               className="mb-2 block text-sm font-medium text-slate-700"
               htmlFor="api-key"
             >
-              DeepSeek API Key
+              AI API Key
             </label>
             <Input.Password
               id="api-key"
               value={settings.apiKey}
-              placeholder="请输入 DeepSeek API Key"
+              placeholder="请输入当前兼容接口的 API Key"
               onChange={(event) =>
                 setSettings((currentSettings) => ({
                   ...currentSettings,
@@ -118,26 +118,25 @@ function AiSettingsPage() {
             />
           </div>
 
-          {/* DeepSeek 模型选择 */}
+          {/* OpenAI 兼容接口的模型名称 */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="model">
-              DeepSeek 模型
+              模型名称
             </label>
-            <Select
+            <Input
               id="model"
-              className="w-full"
               value={settings.model}
-              onChange={(model) =>
+              placeholder="例如 qwen3-vl-plus"
+              onChange={(event) =>
                 setSettings((currentSettings) => ({
                   ...currentSettings,
-                  model,
+                  model: event.target.value,
                 }))
               }
-              options={[
-                { value: 'deepseek-v4-flash', label: 'deepseek-v4-flash' },
-                { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro' },
-              ]}
             />
+            <p className="mt-2 text-sm text-slate-500">
+              当前默认模型为 qwen3-vl-plus，也可以填写其他支持图片输入的模型。
+            </p>
           </div>
 
           {/* 底部操作：恢复默认和保存设置 */}
@@ -145,7 +144,7 @@ function AiSettingsPage() {
             <div>
               <p className="text-sm font-medium text-slate-700">本地设置</p>
               <p className="mt-1 text-sm text-slate-500">
-                保存后，之后调用 DeepSeek 时会使用当前 API Key。
+                保存后，之后调用 OpenAI 兼容接口时会使用当前配置。
               </p>
             </div>
 

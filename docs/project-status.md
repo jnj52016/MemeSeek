@@ -38,7 +38,7 @@ AI Module、AI Service、分析接口和前端重新分析流程已完成
 ### 前端页面
 
 - `/`：梗图列表页。
-- `/ai-settings`：DeepSeek AI 设置页。
+- `/ai-settings`：OpenAI 兼容 AI 设置页，默认使用通义千问视觉模型。
 - 顶部导航和页面布局。
 - 梗图搜索，并将关键词同步到 URL 的 `?q=` 参数。
 - 梗图列表、卡片和上传入口。
@@ -75,7 +75,7 @@ AI Module、AI Service、分析接口和前端重新分析流程已完成
 
 ### 关于 API Key
 
-当前 AI 设置页允许用户在前端输入和更换 DeepSeek API Key，并保存到浏览器 `localStorage`。
+当前 AI 设置页允许用户在前端输入和更换 AI API Key，并保存到浏览器 `localStorage`。
 
 这是为了方便个人本地使用。以后如果公开部署给其他人，需要改为后端保存和调用 API Key。
 
@@ -104,8 +104,8 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 ## 四、当前未完成的内容
 
 - 上传流程运行验证已完成。
-- 配置 `AI_VISION_BASE_URL` 指向支持图片输入的 OpenAI 兼容视觉模型或图片代理。
-- 使用真实 API Key 完成一次端到端图片分析验证。
+- 在 `AI_BASE_URL` 配置通义千问 OpenAI 兼容接口。
+- 使用真实通义千问 API Key 完成一次端到端图片分析验证。
 
 ## 五、下一步操作记录
 
@@ -153,10 +153,10 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 - `POST /memes/:id/analyze` 分析接口。
 - `PROCESSING` → `COMPLETED/FAILED` 状态流转。
 - 保存标题、描述、标签和 OCR 文本。
-- API Key 通过 `x-deepseek-api-key` 请求头临时传递，不保存到数据库。
+- API Key 通过 `x-ai-api-key` 请求头临时传递，不保存到数据库。
 - 前端上传后自动分析，以及失败梗图的“重新分析”操作。
 
-由于 DeepSeek 官方 V4 API 模型目前是文本模型，图片请求需要配置 `AI_VISION_BASE_URL`。项目已实现兼容 OpenAI Chat Completions 的调用和失败处理，但尚未使用真实视觉代理完成端到端请求。
+项目已实现兼容 OpenAI Chat Completions 的通义千问视觉调用和失败处理；当前还需要使用真实通义千问 API Key 完成端到端请求验证。
 
 ## 六、新对话开始时使用的提示词
 

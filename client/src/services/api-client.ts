@@ -170,7 +170,7 @@ export const memesApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-deepseek-api-key': input.apiKey,
+          'x-ai-api-key': input.apiKey,
         },
         body: JSON.stringify({
           model: input.model,

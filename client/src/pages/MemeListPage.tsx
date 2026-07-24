@@ -85,7 +85,7 @@ function MemeListPage() {
     const aiSettings = loadAiSettings()
 
     if (!aiSettings.apiKey.trim()) {
-      throw new Error('请先在 AI 设置中配置 DeepSeek API Key。')
+      throw new Error('请先在 AI 设置中配置 AI API Key。')
     }
 
     const analyzedMeme = await memesApi.analyze(memeToAnalyze.id, {

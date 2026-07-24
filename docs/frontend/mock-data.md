@@ -192,7 +192,7 @@ features/ → 处理梗图业务组件
 - 数据库持久化
 - 多设备同步
 - 真实图片文件保存
-- 真实 DeepSeek API 调用
+- 真实通义千问视觉 API 调用
 - 后端网络错误处理
 
 这些功能要等 NestJS、PostgreSQL 和真实 API 接入后再实现。

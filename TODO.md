@@ -55,7 +55,7 @@ Prisma Module 和 Prisma Service 已完成
 ### 前端页面
 
 - [x] `/` 梗图列表页。
-- [x] `/ai-settings` DeepSeek AI 设置页。
+- [x] `/ai-settings` OpenAI 兼容 AI 设置页（默认通义千问视觉模型）。
 - [x] URL 搜索参数 `?q=`。
 - [x] 梗图卡片和网格布局。
 - [x] 上传梗图抽屉。
@@ -76,7 +76,7 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 默认 AI 设置放在 `client/src/mocks/ai-settings.ts`。
 - [x] Mock 图片放在 `client/public/mock-images/`。
 - [x] AI 设置保存到浏览器 `localStorage`。
-- [x] DeepSeek API Key 可以在前端输入和更换。
+- [x] AI API Key 可以在前端输入和更换。
 - [x] Mock 数据整理文档已创建。
 
 ### Docker 数据库环境
@@ -132,12 +132,12 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 创建后端 AI Module 和 AI Service。
 - [x] 在后端固定默认分析提示词。
 - [x] 实现 OpenAI 兼容 Chat Completions 调用。
-- [x] 确认图片识别方案：官方 DeepSeek V4 文本模型需要视觉模型或图片代理。
+- [x] 确认图片识别方案：使用通义千问 OpenAI 兼容视觉模型。
 - [x] 校验 AI 返回的 JSON。
 - [x] 保存标题、描述、标签和 OCR 文字。
 - [x] 处理 AI 分析失败。
 - [x] 实现重新分析接口。
-- [ ] 配置实际视觉模型或图片代理，并完成 DeepSeek 端到端图片分析。
+- [ ] 使用真实通义千问 API Key 完成端到端图片分析验证。
 
 ### 测试和项目材料
 
@@ -156,14 +156,14 @@ Prisma Module 和 Prisma Service 已完成
 - 项目暂时定位为个人本地工具，优先使用 Docker，不急着部署公网。
 - 当前前端使用 Mock 数据，后端 CRUD 完成后再切换真实 API。
 - 默认 AI 提示词固定在后端，不在前端编辑。
-- 当前个人本地使用时，DeepSeek API Key 保存在浏览器 `localStorage`。
+- 当前个人本地使用时，通义千问 API Key 保存在浏览器 `localStorage`。
 - 如果以后公开部署，API Key 必须改为由后端保存和调用。
 - 第一版 AI 分析使用非流式请求，等完整 JSON 后再保存数据库。
 - 流式请求以后用于自然语言搜索或长文本生成。
-- 当前 DeepSeek V4 官方 API 模型是文本模型，图片分析通过 `AI_VISION_BASE_URL` 配置视觉模型或图片代理；分析请求使用兼容 OpenAI 的 Chat Completions JSON 格式。
-- API Key 继续由浏览器保存，并通过 `x-deepseek-api-key` 请求头临时发送给后端，不保存到数据库。
+- 当前使用通义千问视觉模型，后端通过通用配置 `AI_BASE_URL` 调用 OpenAI 兼容的 Chat Completions 接口，并发送 `image_url` 图片输入。
+- API Key 继续由浏览器保存，并通过 `x-ai-api-key` 请求头临时发送给后端，不保存到数据库。
 
-## 五、当前阶段：AI 后端服务已接入，等待视觉模型配置
+## 五、当前阶段：通义千问视觉接口已接入，等待真实 Key 验证
 
 Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证、后端接口 E2E 测试、AI Module/Service 和前端 AI 调用流程已完成。
 
@@ -179,9 +179,9 @@ Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Cl
 
 下一步：
 
-1. 在 `server/.env` 配置支持图片输入的 OpenAI 兼容视觉模型或图片代理地址：`AI_VISION_BASE_URL`。
-2. 使用真实 API Key 上传一张图片，验证 `PROCESSING` → `COMPLETED/FAILED` 状态流转。
-3. 根据实际视觉模型调整模型名和提示词。
+1. 在 `server/.env` 确认 OpenAI 兼容接口地址和模型名：`AI_BASE_URL`、`AI_MODEL`。
+2. 在前端 AI 设置页填写真实通义千问 API Key，上传一张图片，验证 `PROCESSING` → `COMPLETED/FAILED` 状态流转。
+3. 检查标题、描述、标签和 OCR 是否正确写入数据库。
 
 有 API Key 时，前端上传成功后会自动调用分析接口；没有 API Key 时保留 `COMPLETED`，可以在详情弹窗中配置 Key 后重新分析。
 

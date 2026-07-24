@@ -4,7 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
 
-export const DEFAULT_AI_MODEL = 'deepseek-v4-flash';
+// 默认使用 Qwen 视觉模型，也可以通过 AI_MODEL 切换到其他兼容模型。
+export const DEFAULT_AI_MODEL = 'qwen3-vl-plus';
 
 const DEFAULT_ANALYSIS_PROMPT = `你是一个梗图整理助手。请分析用户提供的图片，并且只返回 JSON，不要返回 Markdown 代码块或额外解释。
 
@@ -108,11 +109,11 @@ export class AiService {
     meme: { title: string; description: string },
     options: AnalyzeMemeOptions,
   ): Promise<MemeAnalysis> {
-    const visionBaseUrl = process.env.AI_VISION_BASE_URL?.replace(/\/$/, '');
+    const baseUrl = process.env.AI_BASE_URL?.replace(/\/$/, '');
 
-    if (!visionBaseUrl) {
+    if (!baseUrl) {
       throw new Error(
-        '未配置 AI_VISION_BASE_URL。当前 DeepSeek 官方模型不支持图片输入，请配置视觉模型或图片代理。',
+        '未配置 AI_BASE_URL。请配置支持图片输入的 OpenAI 兼容模型接口。',
       );
     }
 
@@ -121,7 +122,7 @@ export class AiService {
     const recommendedTags =
       options.recommendedTags?.filter(Boolean).join('、') || '无';
     const userPrompt = `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
-    const response = await fetch(`${visionBaseUrl}/chat/completions`, {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.apiKey}`,

@@ -31,20 +31,20 @@ export class AiController {
   @ApiOperation({ summary: '重新分析梗图' })
   @ApiParam({ name: 'id', description: '梗图 ID' })
   @ApiHeader({
-    name: 'x-deepseek-api-key',
+    name: 'x-ai-api-key',
     required: true,
-    description: '当前本地会话使用的 DeepSeek API Key，不会保存到数据库',
+    description: '当前本地会话使用的 AI API Key，不会保存到数据库',
   })
   @ApiBody({ type: AnalyzeMemeDto })
   @ApiResponse({ status: 200, type: MemeResponseDto })
   @ApiNotFoundResponse({ description: '梗图不存在' })
   async analyze(
     @Param('id') id: string,
-    @Headers('x-deepseek-api-key') apiKey: string | undefined,
+    @Headers('x-ai-api-key') apiKey: string | undefined,
     @Body() dto: AnalyzeMemeDto,
   ) {
     if (!apiKey?.trim()) {
-      throw new BadRequestException('请先配置 DeepSeek API Key');
+      throw new BadRequestException('请先配置 AI API Key');
     }
 
     return this.aiService.analyzeMeme(id, {
