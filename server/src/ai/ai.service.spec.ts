@@ -71,6 +71,7 @@ describe('AiService', () => {
     );
 
     const result = await service.analyzeMeme('meme-1', {
+      baseUrl: 'https://vision.example/v1',
       apiKey: 'test-key',
       model: 'vision-model',
       recommendedTags: ['猫'],

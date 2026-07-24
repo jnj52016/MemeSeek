@@ -154,6 +154,8 @@ export interface components {
             tags?: string[];
         };
         AnalyzeMemeDto: {
+            /** @example https://api.openai.com/v1 */
+            baseUrl?: string;
             /** @example gpt-4o */
             model?: string;
             /**

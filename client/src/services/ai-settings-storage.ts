@@ -26,10 +26,12 @@ function normalizeProviderSettings(
   fallback: AiProviderSettings,
 ): AiProviderSettings {
   const record = isRecord(value) ? value : {}
+  const baseUrl = typeof record.baseUrl === 'string' ? record.baseUrl.trim() : ''
   const model = typeof record.model === 'string' ? record.model.trim() : ''
   const apiKey = typeof record.apiKey === 'string' ? record.apiKey : ''
 
   return {
+    baseUrl: baseUrl || fallback.baseUrl,
     // Do not keep models from the previous Qwen/DeepSeek setup after the
     // application has switched to OpenAI.
     model:
@@ -43,6 +45,7 @@ function normalizeProviderSettings(
 function normalizeSettings(value: unknown): AiSettings {
   const record = isRecord(value) ? value : {}
   const legacyProvider = {
+    baseUrl: record.baseUrl,
     model: record.model,
     apiKey: record.apiKey,
   }

@@ -2,10 +2,12 @@ import type { AiSettings } from '../types/ai-settings'
 
 export const defaultAiSettings: AiSettings = {
   analysis: {
+    baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o',
     apiKey: '',
   },
   content: {
+    baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
     apiKey: '',
   },

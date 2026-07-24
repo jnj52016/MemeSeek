@@ -148,12 +148,13 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 更新 `localStorage` 存储结构，继续使用 `memeseek-ai-settings`，内部改为 `{ analysis, content, ... }`。
 - [x] 增加旧配置迁移：将旧版本顶层的 `apiKey`、`model` 自动迁移到 `analysis`，避免已有用户重新填写配置。
 - [x] 改造 `/ai-settings` 页面，使用两个配置卡片：分析 AI、内容 AI。
+- [x] 在两套配置中增加 OpenAI 兼容接口的 Base URL 输入，并默认使用 `https://api.openai.com/v1`。
 - [x] 分析 AI 配置保留视觉模型说明、API Key 和推荐标签；内容 AI 配置预留文本模型和 API Key。
 - [x] 增加“内容 AI 使用与分析 AI 相同配置”选项，减少同一服务商下的重复填写。
 - [x] 修改上传、列表自动分析和详情重新分析流程，只读取 `analysis` 配置。
 - [x] 为未来的文案改写、自然语言搜索和批量内容生成预留 `content` 配置读取入口；当前没有内容生成接口时不触发内容 AI 调用。
 - [x] 明确接口边界：现有 `POST /memes/:id/analyze` 只属于分析 AI；内容 AI 将来使用独立的内容生成接口。
-- [x] 当前两套配置共用后端 `AI_BASE_URL`；如果以后需要不同服务商，再增加独立的内容 AI Base URL 配置和后端代理参数。
+- [x] 两套配置各自保存 OpenAI 兼容接口的 `baseUrl`；后端 `AI_BASE_URL` 作为未填写地址时的默认兜底。
 
 ### 测试和项目材料
 
@@ -183,7 +184,7 @@ Prisma Module 和 Prisma Service 已完成
 - API Key 继续由浏览器保存，并通过 `x-ai-api-key` 请求头临时发送给后端，不保存到数据库。
 - AI 设置拆分为分析 AI 和内容 AI：分析 AI 负责图片理解、OCR、标题、描述和标签生成；内容 AI 负责未来的文本改写、自然语言搜索和其他内容生成。
 - 当前上传和重新分析流程只使用分析 AI；内容 AI 先完成配置结构，不在尚未实现内容功能时提前调用。
-- 两套配置默认共用 OpenAI 的 `AI_BASE_URL`，各自保存模型和 API Key；如果以后需要支持其他服务商，再扩展独立 Base URL。
+- 两套配置各自保存 OpenAI 兼容接口地址、模型和 API Key；分析请求把地址和模型传给后端，后端 `AI_BASE_URL` 仅作为兜底。当前项目定位为本地工具，公开部署时需要增加 Base URL 白名单以防 SSRF。
 
 ## 五、当前阶段：验证 OpenAI 视觉接口
 

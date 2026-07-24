@@ -89,6 +89,7 @@ function MemeListPage() {
     }
 
     const analyzedMeme = await memesApi.analyze(memeToAnalyze.id, {
+      baseUrl: aiSettings.analysis.baseUrl,
       apiKey: aiSettings.analysis.apiKey.trim(),
       model: aiSettings.analysis.model,
       recommendedTags: aiSettings.recommendedTags,

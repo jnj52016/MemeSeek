@@ -42,6 +42,27 @@ function AiProviderCard({
       <div>
         <label
           className="mb-2 block text-sm font-medium text-slate-700"
+          htmlFor={`${idPrefix}-base-url`}
+        >
+          API 地址
+        </label>
+        <Input
+          id={`${idPrefix}-base-url`}
+          value={settings.baseUrl}
+          disabled={disabled}
+          placeholder="例如 https://api.openai.com/v1"
+          onChange={(event) =>
+            onChange({ ...settings, baseUrl: event.target.value })
+          }
+        />
+        <p className="mt-2 text-sm text-slate-500">
+          填写 OpenAI 兼容接口的 Base URL，不要包含 /chat/completions。
+        </p>
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-sm font-medium text-slate-700"
           htmlFor={`${idPrefix}-api-key`}
         >
           OpenAI API Key

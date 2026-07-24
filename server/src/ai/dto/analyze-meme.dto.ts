@@ -1,8 +1,20 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, type TransformFnParams } from 'class-transformer';
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class AnalyzeMemeDto {
+  @ApiPropertyOptional({ example: 'https://api.openai.com/v1' })
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(500)
+  baseUrl?: string;
+
   @ApiPropertyOptional({ example: 'gpt-4o' })
   @IsOptional()
   @IsString()

@@ -95,7 +95,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 有 API Key 时，前端上传成功后会自动调用 `/memes/:id/analyze`；没有 API Key 时，上传记录保留 `COMPLETED`，用户可以在详情弹窗中配置 Key 后重新分析。
 
-当前 AI 设置保存为两套配置：分析 AI 使用 `gpt-4o` 处理图片识别，内容 AI 使用 `gpt-4o-mini` 预留给后续文本功能；旧版单一设置会自动迁移到分析 AI。
+当前 AI 设置保存为两套配置：分析 AI 使用 `gpt-4o` 处理图片识别，内容 AI 使用 `gpt-4o-mini` 预留给后续文本功能；两套配置都可以填写 OpenAI 兼容接口地址，旧版单一设置会自动迁移到分析 AI。
 
 ### 关于 AI 请求
 

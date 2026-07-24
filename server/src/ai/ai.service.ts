@@ -109,7 +109,9 @@ export class AiService {
     meme: { title: string; description: string },
     options: AnalyzeMemeOptions,
   ): Promise<MemeAnalysis> {
-    const baseUrl = process.env.AI_BASE_URL?.replace(/\/$/, '');
+    const configuredBaseUrl =
+      options.baseUrl?.trim() || process.env.AI_BASE_URL;
+    const baseUrl = configuredBaseUrl?.replace(/\/$/, '');
 
     if (!baseUrl) {
       throw new Error(

@@ -106,6 +106,7 @@ function MemeUploadDrawer({
 
       if (aiSettings.analysis.apiKey.trim()) {
         meme = await memesApi.analyze(meme.id, {
+          baseUrl: aiSettings.analysis.baseUrl,
           apiKey: aiSettings.analysis.apiKey.trim(),
           model: aiSettings.analysis.model,
           recommendedTags: aiSettings.recommendedTags,

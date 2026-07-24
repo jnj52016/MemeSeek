@@ -25,6 +25,7 @@ export type UploadMemeInput = {
 };
 
 export type AnalyzeMemeInput = {
+  baseUrl?: string;
   apiKey: string;
   model?: string;
   recommendedTags?: string[];
@@ -173,6 +174,7 @@ export const memesApi = {
           'x-ai-api-key': input.apiKey,
         },
         body: JSON.stringify({
+          baseUrl: input.baseUrl,
           model: input.model,
           recommendedTags: input.recommendedTags,
         }),
