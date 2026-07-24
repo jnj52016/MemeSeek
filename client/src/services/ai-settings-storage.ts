@@ -1,47 +1,96 @@
-import type { AiSettings } from '../types/ai-settings'
+import type {
+  AiProviderSettings,
+  AiSettings,
+} from '../types/ai-settings'
 import { defaultAiSettings } from '../mocks/ai-settings'
 
-// localStorage 使用的固定名称，避免不同页面使用不同的 Key。
 const AI_SETTINGS_STORAGE_KEY = 'memeseek-ai-settings'
 
-// 从浏览器读取 AI 设置；没有数据或数据格式错误时使用默认值。
+type UnknownRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function cloneDefaultSettings(): AiSettings {
+  return {
+    analysis: { ...defaultAiSettings.analysis },
+    content: { ...defaultAiSettings.content },
+    useAnalysisForContent: defaultAiSettings.useAnalysisForContent,
+    recommendedTags: [...defaultAiSettings.recommendedTags],
+  }
+}
+
+function normalizeProviderSettings(
+  value: unknown,
+  fallback: AiProviderSettings,
+): AiProviderSettings {
+  const record = isRecord(value) ? value : {}
+  const model = typeof record.model === 'string' ? record.model.trim() : ''
+  const apiKey = typeof record.apiKey === 'string' ? record.apiKey : ''
+
+  return {
+    // Do not keep models from the previous Qwen/DeepSeek setup after the
+    // application has switched to OpenAI.
+    model:
+      !model || /^(qwen|deepseek)([-_]|$)/i.test(model)
+        ? fallback.model
+        : model,
+    apiKey,
+  }
+}
+
+function normalizeSettings(value: unknown): AiSettings {
+  const record = isRecord(value) ? value : {}
+  const legacyProvider = {
+    model: record.model,
+    apiKey: record.apiKey,
+  }
+  const hasNewProviderSettings = 'analysis' in record || 'content' in record
+
+  const analysis = normalizeProviderSettings(
+    hasNewProviderSettings ? record.analysis : legacyProvider,
+    defaultAiSettings.analysis,
+  )
+  const content = normalizeProviderSettings(
+    record.content,
+    defaultAiSettings.content,
+  )
+  const recommendedTags = Array.isArray(record.recommendedTags)
+    ? record.recommendedTags.filter(
+        (tag): tag is string => typeof tag === 'string' && Boolean(tag.trim()),
+      )
+    : [...defaultAiSettings.recommendedTags]
+
+  return {
+    analysis,
+    content,
+    useAnalysisForContent:
+      typeof record.useAnalysisForContent === 'boolean'
+        ? record.useAnalysisForContent
+        : true,
+    recommendedTags,
+  }
+}
+
 export function loadAiSettings(): AiSettings {
   if (typeof window === 'undefined') {
-    return defaultAiSettings
+    return cloneDefaultSettings()
   }
 
   const savedSettings = window.localStorage.getItem(AI_SETTINGS_STORAGE_KEY)
 
   if (!savedSettings) {
-    return defaultAiSettings
+    return cloneDefaultSettings()
   }
 
   try {
-    const parsedSettings = JSON.parse(savedSettings) as Partial<AiSettings>
-    const savedModel =
-      typeof parsedSettings.model === 'string' ? parsedSettings.model : ''
-    const model = savedModel.startsWith('deepseek-')
-      ? defaultAiSettings.model
-      : savedModel || defaultAiSettings.model
-
-    return {
-      recommendedTags: Array.isArray(parsedSettings.recommendedTags)
-        ? parsedSettings.recommendedTags.filter(
-            (tag): tag is string => typeof tag === 'string',
-          )
-        : defaultAiSettings.recommendedTags,
-      model,
-      apiKey:
-        typeof parsedSettings.apiKey === 'string'
-          ? parsedSettings.apiKey
-          : defaultAiSettings.apiKey,
-    }
+    return normalizeSettings(JSON.parse(savedSettings) as unknown)
   } catch {
-    return defaultAiSettings
+    return cloneDefaultSettings()
   }
 }
 
-// 把 AI 设置保存到浏览器；当前版本不会把设置发送到后端。
 export function saveAiSettings(settings: AiSettings) {
   if (typeof window === 'undefined') {
     return
@@ -50,9 +99,10 @@ export function saveAiSettings(settings: AiSettings) {
   window.localStorage.setItem(
     AI_SETTINGS_STORAGE_KEY,
     JSON.stringify({
+      analysis: settings.analysis,
+      content: settings.content,
+      useAnalysisForContent: settings.useAnalysisForContent,
       recommendedTags: settings.recommendedTags,
-      model: settings.model,
-      apiKey: settings.apiKey,
     }),
   )
 }

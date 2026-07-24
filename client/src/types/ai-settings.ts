@@ -1,11 +1,16 @@
-/**
- * AI 分析设置
- * @property recommendedTags AI 推荐使用的标签列表。
- * @property model 当前使用的视觉模型名称。
- * @property apiKey AI API Key，仅供个人本地使用。
- */
-export type AiSettings = {
-  recommendedTags: string[]
+/** AI provider settings kept locally for this personal application. */
+export type AiProviderSettings = {
   model: string
   apiKey: string
+}
+
+export type AiSettings = {
+  /** Vision model used to inspect uploaded memes. */
+  analysis: AiProviderSettings
+  /** Text model reserved for future content generation features. */
+  content: AiProviderSettings
+  /** Reuse the analysis provider for content features when enabled. */
+  useAnalysisForContent: boolean
+  /** Tags sent to the analysis prompt as suggestions. */
+  recommendedTags: string[]
 }

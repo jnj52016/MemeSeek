@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、测试补充和 AI 后端服务接入，当前等待配置视觉模型或图片代理进行真实 API 冒烟测试。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、测试补充、AI 后端服务接入和分析 AI / 内容 AI 配置拆分，当前等待使用真实 OpenAI API Key 进行视觉分析冒烟测试。
 
 当前阶段：
 
@@ -21,7 +21,7 @@ POST /memes multipart 上传、文件保存和静态访问已完成
   ↓
 AI Module、AI Service、分析接口和前端重新分析流程已完成
   ↓
-下一步：配置视觉模型或图片代理并进行真实 API 冒烟测试
+下一步：运行配置拆分后的测试和构建，并进行真实 OpenAI API 冒烟测试
 ```
 
 ## 二、已经完成的内容
@@ -38,7 +38,7 @@ AI Module、AI Service、分析接口和前端重新分析流程已完成
 ### 前端页面
 
 - `/`：梗图列表页。
-- `/ai-settings`：OpenAI 兼容 AI 设置页，默认使用通义千问视觉模型。
+- `/ai-settings`：OpenAI AI 设置页，分别配置分析 AI 和内容 AI。
 - 顶部导航和页面布局。
 - 梗图搜索，并将关键词同步到 URL 的 `?q=` 参数。
 - 梗图列表、卡片和上传入口。
@@ -95,6 +95,8 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 有 API Key 时，前端上传成功后会自动调用 `/memes/:id/analyze`；没有 API Key 时，上传记录保留 `COMPLETED`，用户可以在详情弹窗中配置 Key 后重新分析。
 
+当前 AI 设置保存为两套配置：分析 AI 使用 `gpt-4o` 处理图片识别，内容 AI 使用 `gpt-4o-mini` 预留给后续文本功能；旧版单一设置会自动迁移到分析 AI。
+
 ### 关于 AI 请求
 
 第一版 AI 分析优先使用非流式请求，因为需要等待完整 JSON 后保存标题、描述、标签和 OCR 文字。
@@ -104,8 +106,9 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 ## 四、当前未完成的内容
 
 - 上传流程运行验证已完成。
-- 在 `AI_BASE_URL` 配置通义千问 OpenAI 兼容接口。
-- 使用真实通义千问 API Key 完成一次端到端图片分析验证。
+- 在 `AI_BASE_URL` 配置 OpenAI API 地址，默认使用 `https://api.openai.com/v1`。
+- 使用真实 OpenAI API Key 完成一次端到端图片分析验证。
+- 配置拆分后的前端测试、前端构建、后端测试和后端构建需要重新运行。
 
 ## 五、下一步操作记录
 
@@ -156,7 +159,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 - API Key 通过 `x-ai-api-key` 请求头临时传递，不保存到数据库。
 - 前端上传后自动分析，以及失败梗图的“重新分析”操作。
 
-项目已实现兼容 OpenAI Chat Completions 的通义千问视觉调用和失败处理；当前还需要使用真实通义千问 API Key 完成端到端请求验证。
+项目已实现 OpenAI Chat Completions 视觉调用和失败处理；当前还需要重新运行自动化校验，并使用真实 OpenAI API Key 完成端到端请求验证。
 
 ## 六、新对话开始时使用的提示词
 
@@ -169,7 +172,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 然后检查当前项目的 git status。
 请根据 project-status.md 的“下一步操作记录”继续开发。
-当前 AI 后端服务已接入，下一步是配置视觉模型或图片代理并进行真实 API 冒烟测试；先不要修改代码，先告诉我准备做什么。
+当前 AI 后端服务和分析 AI / 内容 AI 配置拆分已完成，下一步是运行测试和构建，再使用真实 OpenAI API 进行冒烟测试；先不要修改代码，先告诉我准备做什么。
 ```
 
 ## 七、更新规则

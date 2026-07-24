@@ -1,20 +1,101 @@
-// AI 设置页面：管理视觉模型 API Key、模型和推荐标签。
 import { useState } from 'react'
-import { Button, Input, message, Tag } from 'antd'
+import { Button, Input, message, Switch, Tag } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { defaultAiSettings } from '../mocks/ai-settings'
 import {
   loadAiSettings,
   saveAiSettings,
 } from '../services/ai-settings-storage'
-import type { AiSettings } from '../types/ai-settings'
+import type {
+  AiProviderSettings,
+  AiSettings,
+} from '../types/ai-settings'
+
+type AiProviderCardProps = {
+  idPrefix: string
+  title: string
+  description: string
+  settings: AiProviderSettings
+  modelPlaceholder: string
+  modelHelp: string
+  disabled?: boolean
+  onChange: (settings: AiProviderSettings) => void
+}
+
+function AiProviderCard({
+  idPrefix,
+  title,
+  description,
+  settings,
+  modelPlaceholder,
+  modelHelp,
+  disabled = false,
+  onChange,
+}: AiProviderCardProps) {
+  return (
+    <section className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <p className="mt-1 text-sm text-slate-500">{description}</p>
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-sm font-medium text-slate-700"
+          htmlFor={`${idPrefix}-api-key`}
+        >
+          OpenAI API Key
+        </label>
+        <Input.Password
+          id={`${idPrefix}-api-key`}
+          value={settings.apiKey}
+          disabled={disabled}
+          placeholder="请输入 OpenAI API Key"
+          onChange={(event) =>
+            onChange({ ...settings, apiKey: event.target.value })
+          }
+        />
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-sm font-medium text-slate-700"
+          htmlFor={`${idPrefix}-model`}
+        >
+          模型名称
+        </label>
+        <Input
+          id={`${idPrefix}-model`}
+          value={settings.model}
+          disabled={disabled}
+          placeholder={modelPlaceholder}
+          onChange={(event) =>
+            onChange({ ...settings, model: event.target.value })
+          }
+        />
+        <p className="mt-2 text-sm text-slate-500">{modelHelp}</p>
+      </div>
+    </section>
+  )
+}
+
+function cloneDefaultSettings(): AiSettings {
+  return {
+    analysis: { ...defaultAiSettings.analysis },
+    content: { ...defaultAiSettings.content },
+    useAnalysisForContent: defaultAiSettings.useAnalysisForContent,
+    recommendedTags: [...defaultAiSettings.recommendedTags],
+  }
+}
 
 function AiSettingsPage() {
-  // 页面状态：settings 保存表单内容，newTag 保存正在输入的新标签。
   const [settings, setSettings] = useState<AiSettings>(() => loadAiSettings())
   const [newTag, setNewTag] = useState('')
 
-  // 标签操作：添加一个新的推荐标签。
+  const updateSettings = (next: Partial<AiSettings>) => {
+    setSettings((currentSettings) => ({ ...currentSettings, ...next }))
+  }
+
   const handleAddTag = (value: string) => {
     const tag = value.trim().replace(/^#/, '')
 
@@ -23,39 +104,33 @@ function AiSettingsPage() {
       return
     }
 
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      recommendedTags: [...currentSettings.recommendedTags, tag],
-    }))
+    updateSettings({
+      recommendedTags: [...settings.recommendedTags, tag],
+    })
     setNewTag('')
   }
 
-  // 标签操作：删除一个已有的推荐标签。
   const handleRemoveTag = (tagToRemove: string) => {
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      recommendedTags: currentSettings.recommendedTags.filter(
+    updateSettings({
+      recommendedTags: settings.recommendedTags.filter(
         (tag) => tag !== tagToRemove,
       ),
-    }))
+    })
   }
 
-  // 设置操作：把当前表单内容保存到浏览器 localStorage。
   const handleSave = () => {
     saveAiSettings(settings)
     message.success('AI 设置已保存')
   }
 
-  // 设置操作：恢复默认设置，但需要点击保存后才会写入 localStorage。
   const handleReset = () => {
-    setSettings(defaultAiSettings)
+    setSettings(cloneDefaultSettings())
     setNewTag('')
     message.info('已恢复默认设置，点击保存后生效')
   }
 
   return (
     <AppLayout>
-      {/* 页面标题区域 */}
       <section className="mx-auto max-w-3xl space-y-8">
         <div>
           <p className="mb-2 text-sm font-medium text-orange-600">系统设置</p>
@@ -63,37 +138,51 @@ function AiSettingsPage() {
             AI 设置
           </h1>
           <p className="mt-2 text-slate-500">
-            配置 OpenAI 兼容 AI 接口使用的模型、API Key 和标签规则。
+            分别配置图片分析和内容生成使用的 OpenAI 模型。API Key 只保存在当前浏览器中。
           </p>
         </div>
 
-        {/* AI 设置表单区域 */}
-        <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {/* AI API Key：仅个人本地使用时保存在浏览器中。 */}
-          <div>
-            <label
-              className="mb-2 block text-sm font-medium text-slate-700"
-              htmlFor="api-key"
-            >
-              AI API Key
-            </label>
-            <Input.Password
-              id="api-key"
-              value={settings.apiKey}
-              placeholder="请输入当前兼容接口的 API Key"
-              onChange={(event) =>
-                setSettings((currentSettings) => ({
-                  ...currentSettings,
-                  apiKey: event.target.value,
-                }))
-              }
-            />
-            <p className="mt-2 text-sm text-amber-600">
-              API Key 会保存在当前浏览器中，仅建议个人本地使用。
-            </p>
+        <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AiProviderCard
+            title="分析 AI"
+            description="负责识别梗图、OCR，并生成标题、描述和标签。当前上传和重新分析流程使用此配置。"
+            idPrefix="analysis-ai"
+            settings={settings.analysis}
+            modelPlaceholder="例如 gpt-4o"
+            modelHelp="模型需要支持图片输入；默认使用 gpt-4o。"
+            onChange={(analysis) => updateSettings({ analysis })}
+          />
+
+          <AiProviderCard
+            title="内容 AI"
+            description="预留给文案改写、自然语言搜索和批量内容生成等文本功能。"
+            idPrefix="content-ai"
+            settings={settings.content}
+            modelPlaceholder="例如 gpt-4o-mini"
+            modelHelp="当前版本尚未调用内容 AI；配置会保存在本地，供后续功能使用。"
+            disabled={settings.useAnalysisForContent}
+            onChange={(content) => updateSettings({ content })}
+          />
+
+          <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium text-slate-800">
+                  内容 AI 使用分析 AI 配置
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  适合分析和内容生成使用同一个 OpenAI 账号时开启。
+                </p>
+              </div>
+              <Switch
+                checked={settings.useAnalysisForContent}
+                onChange={(useAnalysisForContent) =>
+                  updateSettings({ useAnalysisForContent })
+                }
+              />
+            </div>
           </div>
 
-          {/* 推荐标签：AI 分析时可以优先参考这些标签。 */}
           <div>
             <p className="mb-2 text-sm font-medium text-slate-700">推荐标签</p>
             <div className="mb-3 flex flex-wrap gap-2">
@@ -118,33 +207,11 @@ function AiSettingsPage() {
             />
           </div>
 
-          {/* OpenAI 兼容接口的模型名称 */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="model">
-              模型名称
-            </label>
-            <Input
-              id="model"
-              value={settings.model}
-              placeholder="例如 qwen3-vl-plus"
-              onChange={(event) =>
-                setSettings((currentSettings) => ({
-                  ...currentSettings,
-                  model: event.target.value,
-                }))
-              }
-            />
-            <p className="mt-2 text-sm text-slate-500">
-              当前默认模型为 qwen3-vl-plus，也可以填写其他支持图片输入的模型。
-            </p>
-          </div>
-
-          {/* 底部操作：恢复默认和保存设置 */}
           <div className="flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-slate-700">本地设置</p>
               <p className="mt-1 text-sm text-slate-500">
-                保存后，之后调用 OpenAI 兼容接口时会使用当前配置。
+                两套配置都会保存到浏览器 localStorage，不会写入数据库。
               </p>
             </div>
 

@@ -154,7 +154,7 @@ export interface components {
             tags?: string[];
         };
         AnalyzeMemeDto: {
-            /** @example qwen3-vl-plus */
+            /** @example gpt-4o */
             model?: string;
             /**
              * @example [

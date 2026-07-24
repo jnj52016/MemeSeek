@@ -6,7 +6,7 @@
 
 ## 一、当前进度
 
-项目已经完成前端 Mock MVP、后端 CRUD 和前后端列表联调，现在进入图片上传闭环验证阶段。
+项目已经完成前端 Mock MVP、后端 CRUD、图片上传闭环、AI 后端服务接入以及分析 AI / 内容 AI 配置拆分，现在进入 OpenAI 真实视觉模型验证阶段。
 
 ```text
 前端 Mock 页面已完成
@@ -25,10 +25,10 @@ Prisma Module 和 Prisma Service 已完成
         ↓
 后端接口测试和 AI 失败状态测试已完成
         ↓
-下一步：创建后端 AI Module 和 AI Service
+下一步：运行配置拆分后的测试和构建，然后完成 OpenAI 真实视觉模型冒烟测试
 ```
 
-说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
+说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试此前均已通过；本次 AI 配置拆分后的测试和构建仍待重新运行。
 
 ## 二、已完成内容
 
@@ -55,7 +55,7 @@ Prisma Module 和 Prisma Service 已完成
 ### 前端页面
 
 - [x] `/` 梗图列表页。
-- [x] `/ai-settings` OpenAI 兼容 AI 设置页（默认通义千问视觉模型）。
+- [x] `/ai-settings` OpenAI AI 设置页（默认 OpenAI 视觉模型）。
 - [x] URL 搜索参数 `?q=`。
 - [x] 梗图卡片和网格布局。
 - [x] 上传梗图抽屉。
@@ -132,12 +132,28 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 创建后端 AI Module 和 AI Service。
 - [x] 在后端固定默认分析提示词。
 - [x] 实现 OpenAI 兼容 Chat Completions 调用。
-- [x] 确认图片识别方案：使用通义千问 OpenAI 兼容视觉模型。
+- [x] 确认图片识别方案：使用 OpenAI 视觉模型和 Chat Completions 接口。
 - [x] 校验 AI 返回的 JSON。
 - [x] 保存标题、描述、标签和 OCR 文字。
 - [x] 处理 AI 分析失败。
 - [x] 实现重新分析接口。
-- [ ] 使用真实通义千问 API Key 完成端到端图片分析验证。
+- [ ] 使用真实 OpenAI API Key 完成端到端图片分析验证。
+
+### AI 配置拆分计划
+
+目标是把当前单一的 `AiSettings` 拆分成两类配置，避免视觉识别模型和后续文本生成模型混在一起：
+
+- [x] 将 `AiSettings` 类型拆分为 `analysis` 和 `content` 两套配置，至少分别保存 `apiKey` 和 `model`。
+- [x] 更新 `defaultAiSettings`：分析 AI 默认使用 `gpt-4o`，内容 AI 默认使用 `gpt-4o-mini`。
+- [x] 更新 `localStorage` 存储结构，继续使用 `memeseek-ai-settings`，内部改为 `{ analysis, content, ... }`。
+- [x] 增加旧配置迁移：将旧版本顶层的 `apiKey`、`model` 自动迁移到 `analysis`，避免已有用户重新填写配置。
+- [x] 改造 `/ai-settings` 页面，使用两个配置卡片：分析 AI、内容 AI。
+- [x] 分析 AI 配置保留视觉模型说明、API Key 和推荐标签；内容 AI 配置预留文本模型和 API Key。
+- [x] 增加“内容 AI 使用与分析 AI 相同配置”选项，减少同一服务商下的重复填写。
+- [x] 修改上传、列表自动分析和详情重新分析流程，只读取 `analysis` 配置。
+- [x] 为未来的文案改写、自然语言搜索和批量内容生成预留 `content` 配置读取入口；当前没有内容生成接口时不触发内容 AI 调用。
+- [x] 明确接口边界：现有 `POST /memes/:id/analyze` 只属于分析 AI；内容 AI 将来使用独立的内容生成接口。
+- [x] 当前两套配置共用后端 `AI_BASE_URL`；如果以后需要不同服务商，再增加独立的内容 AI Base URL 配置和后端代理参数。
 
 ### 测试和项目材料
 
@@ -147,6 +163,9 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 测试 AI 分析失败状态。
 - [x] 完成后端 Meme API E2E 测试，覆盖上传、查询、编辑、删除、静态文件和错误响应。
 - [x] 测试编辑和删除流程。
+- [x] 测试分析 AI / 内容 AI 两套配置的保存和读取。
+- [x] 测试旧版单一 AI 配置迁移到分析 AI 配置。
+- [ ] 测试上传自动分析、详情重新分析只使用分析 AI 配置。
 - [ ] 完善 README。
 - [ ] 添加项目截图、架构图和流程图。
 - [ ] 准备项目演示流程。
@@ -156,16 +175,21 @@ Prisma Module 和 Prisma Service 已完成
 - 项目暂时定位为个人本地工具，优先使用 Docker，不急着部署公网。
 - 当前前端使用 Mock 数据，后端 CRUD 完成后再切换真实 API。
 - 默认 AI 提示词固定在后端，不在前端编辑。
-- 当前个人本地使用时，通义千问 API Key 保存在浏览器 `localStorage`。
+- 当前个人本地使用时，OpenAI API Key 保存在浏览器 `localStorage`。
 - 如果以后公开部署，API Key 必须改为由后端保存和调用。
 - 第一版 AI 分析使用非流式请求，等完整 JSON 后再保存数据库。
 - 流式请求以后用于自然语言搜索或长文本生成。
-- 当前使用通义千问视觉模型，后端通过通用配置 `AI_BASE_URL` 调用 OpenAI 兼容的 Chat Completions 接口，并发送 `image_url` 图片输入。
+- 当前统一使用 OpenAI：后端通过 `AI_BASE_URL` 调用 OpenAI Chat Completions 接口，并发送 `image_url` 图片输入；默认地址为 `https://api.openai.com/v1`。
 - API Key 继续由浏览器保存，并通过 `x-ai-api-key` 请求头临时发送给后端，不保存到数据库。
+- AI 设置拆分为分析 AI 和内容 AI：分析 AI 负责图片理解、OCR、标题、描述和标签生成；内容 AI 负责未来的文本改写、自然语言搜索和其他内容生成。
+- 当前上传和重新分析流程只使用分析 AI；内容 AI 先完成配置结构，不在尚未实现内容功能时提前调用。
+- 两套配置默认共用 OpenAI 的 `AI_BASE_URL`，各自保存模型和 API Key；如果以后需要支持其他服务商，再扩展独立 Base URL。
 
-## 五、当前阶段：通义千问视觉接口已接入，等待真实 Key 验证
+## 五、当前阶段：验证 OpenAI 视觉接口
 
-Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证、后端接口 E2E 测试、AI Module/Service 和前端 AI 调用流程已完成。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证、后端接口 E2E 测试、AI Module/Service 和前端分析 AI 调用流程已完成。
+
+前端原有的单一 AI 设置已经拆分为分析 AI 和内容 AI。分析 AI 用于当前图片分析闭环；内容 AI 用于后续文本改写、自然语言搜索和批量内容生成，目前只建立配置结构，不提前实现未确定的业务接口。
 
 图片上传已接通：后端通过 `POST /memes` 接收 multipart 文件，保存到 `server/uploads/memes/`，并通过 `/uploads/memes/...` 提供静态访问；前端上传成功后会刷新 TanStack Query 列表。
 
@@ -175,13 +199,14 @@ Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Cl
 - AI Service 单元测试覆盖成功 JSON 解析和失败状态持久化。
 - AI 分析接口 E2E 测试覆盖未配置视觉代理时的 `FAILED` 状态。
 - 前端测试覆盖上传后 AI 分析、重新分析入口、失败状态及错误信息展示。
-- 前后端生产构建均已通过。
+- 配置拆分后的测试和前后端生产构建需要重新运行；当前环境缺少 `node` / `pnpm`，尚未完成本次改动后的自动化验证。
 
 下一步：
 
-1. 在 `server/.env` 确认 OpenAI 兼容接口地址和模型名：`AI_BASE_URL`、`AI_MODEL`。
-2. 在前端 AI 设置页填写真实通义千问 API Key，上传一张图片，验证 `PROCESSING` → `COMPLETED/FAILED` 状态流转。
-3. 检查标题、描述、标签和 OCR 是否正确写入数据库。
+1. 在有 Node.js / pnpm 的环境中运行前端测试、前端构建、后端测试和后端构建。
+2. 在 `server/.env` 确认 OpenAI 地址和模型名：`AI_BASE_URL=https://api.openai.com/v1`、`AI_MODEL=gpt-4o`。
+3. 在前端分析 AI 设置中填写真实 OpenAI API Key，上传一张图片，验证 `PROCESSING` → `COMPLETED/FAILED` 状态流转。
+4. 检查标题、描述、标签和 OCR 是否正确写入数据库。
 
 有 API Key 时，前端上传成功后会自动调用分析接口；没有 API Key 时保留 `COMPLETED`，可以在详情弹窗中配置 Key 后重新分析。
 
@@ -198,7 +223,7 @@ Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Cl
 3. docs/project-architecture-guide.md
 
 请检查当前项目的 git status，并根据 TODO.md 的“下一步”继续。
-当前 AI 后端服务已接入，下一步是配置视觉模型或图片代理并进行真实 API 冒烟测试；先告诉我准备做什么，等我确认后再执行。
+当前 AI 后端服务已接入，下一步是先把前端 AI 配置拆分为分析 AI 和内容 AI，再配置视觉模型并进行真实 API 冒烟测试；先告诉我准备做什么，等我确认后再执行。
 先告诉我准备做什么，等我确认后再执行。
 ```
 

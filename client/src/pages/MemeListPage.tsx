@@ -84,13 +84,13 @@ function MemeListPage() {
   const handleAnalyzeMeme = async (memeToAnalyze: Meme) => {
     const aiSettings = loadAiSettings()
 
-    if (!aiSettings.apiKey.trim()) {
+    if (!aiSettings.analysis.apiKey.trim()) {
       throw new Error('请先在 AI 设置中配置 AI API Key。')
     }
 
     const analyzedMeme = await memesApi.analyze(memeToAnalyze.id, {
-      apiKey: aiSettings.apiKey.trim(),
-      model: aiSettings.model,
+      apiKey: aiSettings.analysis.apiKey.trim(),
+      model: aiSettings.analysis.model,
       recommendedTags: aiSettings.recommendedTags,
     })
 

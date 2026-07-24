@@ -72,7 +72,7 @@ NestJS MemesService
       ↓
 NestJS AiService
       ↓
-通义千问等视觉模型
+OpenAI 视觉模型
       ↓
 保存 AI 分析结果
 ```

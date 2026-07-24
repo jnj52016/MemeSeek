@@ -4,8 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
 
-// 默认使用 Qwen 视觉模型，也可以通过 AI_MODEL 切换到其他兼容模型。
-export const DEFAULT_AI_MODEL = 'qwen3-vl-plus';
+// 默认使用 OpenAI 视觉模型，也可以通过 AI_MODEL 切换模型。
+export const DEFAULT_AI_MODEL = 'gpt-4o';
 
 const DEFAULT_ANALYSIS_PROMPT = `你是一个梗图整理助手。请分析用户提供的图片，并且只返回 JSON，不要返回 Markdown 代码块或额外解释。
 

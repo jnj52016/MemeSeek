@@ -104,10 +104,10 @@ function MemeUploadDrawer({
 
       const aiSettings = loadAiSettings()
 
-      if (aiSettings.apiKey.trim()) {
+      if (aiSettings.analysis.apiKey.trim()) {
         meme = await memesApi.analyze(meme.id, {
-          apiKey: aiSettings.apiKey.trim(),
-          model: aiSettings.model,
+          apiKey: aiSettings.analysis.apiKey.trim(),
+          model: aiSettings.analysis.model,
           recommendedTags: aiSettings.recommendedTags,
         })
       }

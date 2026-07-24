@@ -164,7 +164,7 @@ describe('Memes API (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post(`/memes/${memeId}/analyze`)
         .set('x-ai-api-key', 'test-key')
-        .send({ model: 'qwen3-vl-plus' })
+        .send({ model: 'gpt-4o' })
         .expect(200);
 
       expect(response.body).toEqual(

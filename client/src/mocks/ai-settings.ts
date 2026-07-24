@@ -1,8 +1,14 @@
 import type { AiSettings } from '../types/ai-settings'
 
-// AI 设置的默认数据：用于首次打开页面或恢复默认设置。
 export const defaultAiSettings: AiSettings = {
+  analysis: {
+    model: 'gpt-4o',
+    apiKey: '',
+  },
+  content: {
+    model: 'gpt-4o-mini',
+    apiKey: '',
+  },
+  useAnalysisForContent: true,
   recommendedTags: ['猫', '动物', '表情', '吐槽', '日常'],
-  model: 'qwen3-vl-plus',
-  apiKey: '',
 }

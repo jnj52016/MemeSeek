@@ -11,9 +11,9 @@ MemeSeek 最适合采用下面这条路线：
    ▼
 NestJS 后端
    │
-   │ 使用 API Key 调用通义千问视觉模型
+   │ 使用 API Key 调用 OpenAI 视觉模型
    ▼
-通义千问 OpenAI 兼容 API
+OpenAI Chat Completions API
    │
    │ 返回完整结果或分段结果
    ▼
@@ -27,8 +27,8 @@ NestJS 后端
 也就是说，推荐的最终结构是：
 
 ```text
-前端 → 后端 → 通义千问视觉 API
-前端 ← 后端 ← 通义千问视觉 API
+前端 → 后端 → OpenAI 视觉 API
+前端 ← 后端 ← OpenAI 视觉 API
 ```
 
 前端负责页面展示，后端负责调用 AI、处理结果和保存数据。
@@ -72,7 +72,7 @@ NestJS 后端暂存 API Key
 后端调用视觉 AI API 时，API Key 放在请求头中：
 
 ```http
-Authorization: Bearer 你的_DEEPSEEK_API_KEY
+Authorization: Bearer 你的_OPENAI_API_KEY
 ```
 
 数据路线如下：
@@ -84,7 +84,7 @@ NestJS AiService
         ↓
 发送 Authorization 请求头
         ↓
-POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+POST https://api.openai.com/v1/chat/completions
         ↓
 读取视觉模型返回结果
 ```
@@ -222,7 +222,7 @@ data: [DONE]
 后端可以先把 Key 保存在内存中：
 
 ```ts
-private currentApiKey = process.env.DEEPSEEK_API_KEY ?? ''
+private currentApiKey = process.env.OPENAI_API_KEY ?? ''
 ```
 
 用户更换 Key 时，只更新 `currentApiKey`，不需要重启服务。
@@ -231,17 +231,17 @@ private currentApiKey = process.env.DEEPSEEK_API_KEY ?? ''
 
 ## 九、梗图图片分析需要特别注意
 
-通义千问视觉模型支持通过 OpenAI 兼容 Chat Completions 接口接收 `image_url`，可以直接完成梗图的图片理解、OCR 和结构化分析：
+OpenAI 视觉模型通过 Chat Completions 接口接收 `image_url`，可以直接完成梗图的图片理解、OCR 和结构化分析：
 
 ```text
 梗图图片
    ↓
-通义千问视觉模型
+OpenAI 视觉模型
    ↓
 标题、描述、标签、OCR 文字
 ```
 
-当前实现直接使用支持图片输入的通义千问视觉模型完成全部分析。
+当前实现直接使用支持图片输入的 OpenAI 视觉模型完成全部分析。
 
 ## 十、MemeSeek 的推荐实现顺序
 
@@ -254,7 +254,7 @@ private currentApiKey = process.env.DEEPSEEK_API_KEY ?? ''
         ↓
 第四步：先用非流式请求测试文本分析
         ↓
-第五步：确认通义千问视觉模型方案
+第五步：确认 OpenAI 视觉模型方案
         ↓
 第六步：接入梗图上传和 AI 分析流程
         ↓
@@ -277,9 +277,9 @@ AI_BASE_URL/chat/completions
 校验 JSON 并保存 COMPLETED，或保存 FAILED 和 errorMessage
 ```
 
-`AI_BASE_URL` 当前配置为通义千问 OpenAI 兼容接口，例如 `https://dashscope.aliyuncs.com/compatible-mode/v1`；代码会自动追加 `/chat/completions`。以后切换到其他 OpenAI 兼容模型时，只需修改 `AI_BASE_URL` 和 `AI_MODEL`。
+`AI_BASE_URL` 当前配置为 OpenAI API，例如 `https://api.openai.com/v1`；代码会自动追加 `/chat/completions`。只需修改 `AI_BASE_URL` 和 `AI_MODEL` 即可切换模型。
 
 ## 十二、参考资料
 
-- [通义千问 OpenAI 兼容 Chat Completions](https://help.aliyun.com/zh/model-studio/qwen-vl-compatible-with-openai)
-- [通义千问 OpenAI 兼容接口参数](https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-chat-completions)
+- [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat)
+- [OpenAI vision guide](https://platform.openai.com/docs/guides/images-vision)
