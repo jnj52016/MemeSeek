@@ -57,6 +57,22 @@ export interface paths {
         patch: operations["MemesController_update"];
         trace?: never;
     };
+    "/memes/{id}/open-location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MemesController_openLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/memes/{id}/analyze": {
         parameters: {
             query?: never;
@@ -308,6 +324,36 @@ export interface operations {
                 };
             };
             /** @description 梗图不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MemesController_openLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Meme ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;

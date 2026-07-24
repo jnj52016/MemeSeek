@@ -81,6 +81,10 @@ function MemeListPage() {
     await deleteMemeMutation.mutateAsync(memeToDelete.id)
   }
 
+  const handleOpenMemeLocation = async (memeToOpen: Meme) => {
+    await memesApi.openLocation(memeToOpen.id)
+  }
+
   const handleAnalyzeMeme = async (memeToAnalyze: Meme) => {
     const aiSettings = loadAiSettings()
 
@@ -163,6 +167,7 @@ function MemeListPage() {
         onClose={() => setSelectedMeme(null)}
         onUpdate={handleUpdateMeme}
         onDelete={handleDeleteMeme}
+        onOpenLocation={handleOpenMemeLocation}
         onAnalyze={handleAnalyzeMeme}
       />
 

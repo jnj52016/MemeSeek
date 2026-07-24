@@ -8,6 +8,7 @@ import {
   Popconfirm,
   Tag,
 } from 'antd'
+import { FolderOpenOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { resolveMemeImageUrl } from '../../../services/api-client'
 import type { Meme, MemeStatus } from '../../../types/meme'
@@ -18,6 +19,7 @@ type MemeDetailModalProps = {
   onClose: () => void
   onUpdate: (meme: Meme) => void | Promise<void>
   onDelete: (meme: Meme) => void | Promise<void>
+  onOpenLocation?: (meme: Meme) => Promise<void>
   onAnalyze?: (meme: Meme) => Promise<Meme>
 }
 
@@ -34,6 +36,7 @@ function MemeDetailModal({
   onClose,
   onUpdate,
   onDelete,
+  onOpenLocation,
   onAnalyze,
 }: MemeDetailModalProps) {
   // 编辑状态和表单草稿：只在用户点击“编辑信息”后使用。
@@ -45,6 +48,7 @@ function MemeDetailModal({
   const [draftTags, setDraftTags] = useState<string[]>(meme?.tags ?? [])
   const [newTag, setNewTag] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isOpeningLocation, setIsOpeningLocation] = useState(false)
 
   const handleStartEditing = () => {
     if (!meme) {
@@ -130,6 +134,25 @@ function MemeDetailModal({
     }
   }
 
+  const handleOpenLocation = async () => {
+    if (!meme || !onOpenLocation) {
+      return
+    }
+
+    setIsOpeningLocation(true)
+
+    try {
+      await onOpenLocation(meme)
+      message.success('已打开图片所在位置')
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : '无法打开图片所在位置，请稍后重试',
+      )
+    } finally {
+      setIsOpeningLocation(false)
+    }
+  }
+
   const handleAnalyze = async () => {
     if (!meme || !onAnalyze) {
       return
@@ -164,11 +187,23 @@ function MemeDetailModal({
     >
       {meme && (
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_240px]">
-          <img
-            src={resolveMemeImageUrl(meme.imageUrl)}
-            alt={meme.title}
-            className="max-h-[520px] w-full rounded-xl object-contain"
-          />
+          <div className="space-y-3">
+            <img
+              src={resolveMemeImageUrl(meme.imageUrl)}
+              alt={meme.title}
+              className="max-h-[520px] w-full rounded-xl object-contain"
+            />
+            {onOpenLocation && meme.imageUrl.startsWith('/uploads/memes/') && (
+              <Button
+                block
+                icon={<FolderOpenOutlined />}
+                loading={isOpeningLocation}
+                onClick={() => void handleOpenLocation()}
+              >
+                打开文件所在位置
+              </Button>
+            )}
+          </div>
 
           <div className="space-y-5">
             {isEditing ? (

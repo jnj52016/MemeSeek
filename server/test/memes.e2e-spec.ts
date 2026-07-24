@@ -137,6 +137,9 @@ describe('Memes API (e2e)', () => {
     const missingId = 'missing-meme-id';
     await request(app.getHttpServer()).get(`/memes/${missingId}`).expect(404);
     await request(app.getHttpServer())
+      .post(`/memes/${missingId}/open-location`)
+      .expect(404);
+    await request(app.getHttpServer())
       .patch(`/memes/${missingId}`)
       .send({ title: '不存在的梗图' })
       .expect(404);

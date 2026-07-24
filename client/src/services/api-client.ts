@@ -164,6 +164,14 @@ export const memesApi = {
     return unwrapResponse(response.data, response.error);
   },
 
+  async openLocation(id: string): Promise<void> {
+    const response = await apiClient.POST('/memes/{id}/open-location', {
+      params: { path: { id } },
+    });
+
+    unwrapResponse(response.data, response.error);
+  },
+
   async analyze(id: string, input: AnalyzeMemeInput): Promise<Meme> {
     const response = await fetch(
       `${API_BASE_URL}/memes/${encodeURIComponent(id)}/analyze`,

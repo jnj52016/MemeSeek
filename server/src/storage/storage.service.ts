@@ -3,9 +3,11 @@ import {
   NotFoundException,
   Injectable,
   PayloadTooLargeException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { exec, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 
 export const MAX_MEME_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -105,6 +107,80 @@ export class StorageService {
         throw error;
       }
     }
+  }
+
+  async openMemeImageLocation(imageUrl: string): Promise<void> {
+    const filePath = this.resolveMemeImagePath(imageUrl);
+
+    if (!filePath) {
+      throw new BadRequestException('只能打开本地上传的梗图图片所在位置');
+    }
+
+    try {
+      await stat(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new NotFoundException('梗图图片文件不存在');
+      }
+
+      throw error;
+    }
+
+    try {
+      if (process.platform === 'win32') {
+        await this.launchWindowsExplorer(filePath);
+        return;
+      }
+
+      if (process.platform === 'darwin') {
+        await this.launchFileManager('open', ['-R', filePath]);
+        return;
+      }
+
+      if (process.platform === 'linux') {
+        await this.launchFileManager('xdg-open', [dirname(filePath)]);
+        return;
+      }
+    } catch {
+      throw new ServiceUnavailableException('无法打开图片所在位置，请检查当前系统的文件管理器');
+    }
+
+    throw new ServiceUnavailableException('当前系统不支持打开图片所在位置');
+  }
+
+  private launchWindowsExplorer(filePath: string): Promise<void> {
+    const explorerPath = join(
+      process.env.WINDIR ?? 'C:\\Windows',
+      'explorer.exe',
+    );
+    const command = `start "" "${explorerPath}" /select,"${filePath}"`;
+
+    return new Promise((resolve, reject) => {
+      exec(command, { windowsHide: true }, (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+  }
+
+  private launchFileManager(command: string, args: string[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+
+      child.once('error', reject);
+      child.once('spawn', () => {
+        child.unref();
+        resolve();
+      });
+    });
   }
 
   private resolveMemeImagePath(imageUrl: string | null | undefined): string | null {

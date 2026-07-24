@@ -92,6 +92,14 @@ export class MemesService {
     return meme;
   }
 
+  async openLocation(id: string) {
+    const meme = await this.findOne(id);
+
+    await this.storage.openMemeImageLocation(meme.imageUrl);
+
+    return { success: true };
+  }
+
   async update(id: string, dto: UpdateMemeDto) {
     await this.findOne(id);
 

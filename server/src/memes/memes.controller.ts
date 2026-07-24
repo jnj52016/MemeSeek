@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -85,6 +87,19 @@ export class MemesController {
   @ApiResponse({ status: 404, description: '梗图不存在' })
   findOne(@Param('id') id: string) {
     return this.memesService.findOne(id);
+  }
+
+  @Post(':id/open-location')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '打开梗图文件所在位置' })
+  @ApiParam({ name: 'id', description: '梗图 ID' })
+  @ApiResponse({
+    status: 200,
+    schema: { properties: { success: { type: 'boolean', example: true } } },
+  })
+  @ApiResponse({ status: 404, description: '梗图或图片文件不存在' })
+  openLocation(@Param('id') id: string) {
+    return this.memesService.openLocation(id);
   }
 
   @Patch(':id')

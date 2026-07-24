@@ -76,6 +76,28 @@ describe('MemeDetailModal', () => {
     })
   })
 
+  it('opens the local image location', async () => {
+    const user = userEvent.setup()
+    const onOpenLocation = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <MemeDetailModal
+        meme={meme}
+        open
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onOpenLocation={onOpenLocation}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '打开文件所在位置' }))
+
+    await waitFor(() => {
+      expect(onOpenLocation).toHaveBeenCalledWith(meme)
+    })
+  })
+
   it('shows the AI analysis failure state and error message', () => {
     render(
       <MemeDetailModal
