@@ -18,6 +18,7 @@ type MemeDetailModalProps = {
   onClose: () => void
   onUpdate: (meme: Meme) => void | Promise<void>
   onDelete: (meme: Meme) => void | Promise<void>
+  onAnalyze?: (meme: Meme) => Promise<Meme>
 }
 
 // statusText 把梗图状态值转换成详情弹窗中的中文说明。
@@ -33,6 +34,7 @@ function MemeDetailModal({
   onClose,
   onUpdate,
   onDelete,
+  onAnalyze,
 }: MemeDetailModalProps) {
   // 编辑状态和表单草稿：只在用户点击“编辑信息”后使用。
   const [isEditing, setIsEditing] = useState(false)
@@ -122,6 +124,30 @@ function MemeDetailModal({
     } catch (error) {
       message.error(
         error instanceof Error ? error.message : '梗图删除失败，请稍后重试。',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleAnalyze = async () => {
+    if (!meme || !onAnalyze) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const analyzedMeme = await onAnalyze(meme)
+
+      if (analyzedMeme.status === 'FAILED') {
+        message.error(analyzedMeme.errorMessage ?? 'AI 分析失败，请稍后重试。')
+      } else {
+        message.success('梗图分析已完成')
+      }
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : 'AI 分析失败，请稍后重试。',
       )
     } finally {
       setIsSubmitting(false)
@@ -244,12 +270,18 @@ function MemeDetailModal({
                 {statusText[meme.status]}
               </p>
               {meme.status === 'FAILED' && (
-                <Alert
-                  className="mt-3"
-                  type="error"
-                  showIcon
-                  message={meme.errorMessage ?? 'AI 分析失败，请稍后重试。'}
-                />
+                <div className="mt-3 space-y-3">
+                  <Alert
+                    type="error"
+                    showIcon
+                    message={meme.errorMessage ?? 'AI 分析失败，请稍后重试。'}
+                  />
+                  {onAnalyze && (
+                    <Button loading={isSubmitting} onClick={() => void handleAnalyze()}>
+                      重新分析
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 

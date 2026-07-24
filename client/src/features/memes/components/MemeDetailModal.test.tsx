@@ -94,4 +94,32 @@ describe('MemeDetailModal', () => {
     expect(screen.getByText('分析失败')).toBeInTheDocument()
     expect(screen.getByText('DeepSeek 请求超时')).toBeInTheDocument()
   })
+
+  it('calls the re-analysis handler for a failed meme', async () => {
+    const user = userEvent.setup()
+    const onAnalyze = vi.fn().mockResolvedValue({
+      ...meme,
+      status: 'COMPLETED',
+      errorMessage: null,
+    })
+
+    render(
+      <MemeDetailModal
+        meme={{ ...meme, status: 'FAILED', errorMessage: '上一次分析失败' }}
+        open
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onAnalyze={onAnalyze}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '重新分析' }))
+
+    await waitFor(() => {
+      expect(onAnalyze).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'FAILED' }),
+      )
+    })
+  })
 })

@@ -129,14 +129,15 @@ Prisma Module 和 Prisma Service 已完成
 
 ### AI 功能
 
-- [ ] 创建后端 AI Module 和 AI Service。
-- [ ] 在后端固定默认分析提示词。
-- [ ] 接入 DeepSeek API。
-- [ ] 确认图片识别方案。
-- [ ] 校验 AI 返回的 JSON。
-- [ ] 保存标题、描述、标签和 OCR 文字。
-- [ ] 处理 AI 分析失败。
-- [ ] 实现重新分析接口。
+- [x] 创建后端 AI Module 和 AI Service。
+- [x] 在后端固定默认分析提示词。
+- [x] 实现 OpenAI 兼容 Chat Completions 调用。
+- [x] 确认图片识别方案：官方 DeepSeek V4 文本模型需要视觉模型或图片代理。
+- [x] 校验 AI 返回的 JSON。
+- [x] 保存标题、描述、标签和 OCR 文字。
+- [x] 处理 AI 分析失败。
+- [x] 实现重新分析接口。
+- [ ] 配置实际视觉模型或图片代理，并完成 DeepSeek 端到端图片分析。
 
 ### 测试和项目材料
 
@@ -159,27 +160,30 @@ Prisma Module 和 Prisma Service 已完成
 - 如果以后公开部署，API Key 必须改为由后端保存和调用。
 - 第一版 AI 分析使用非流式请求，等完整 JSON 后再保存数据库。
 - 流式请求以后用于自然语言搜索或长文本生成。
-- 当前还需要确认 DeepSeek 使用的模型是否支持图片输入，必要时增加视觉模型。
+- 当前 DeepSeek V4 官方 API 模型是文本模型，图片分析通过 `AI_VISION_BASE_URL` 配置视觉模型或图片代理；分析请求使用兼容 OpenAI 的 Chat Completions JSON 格式。
+- API Key 继续由浏览器保存，并通过 `x-deepseek-api-key` 请求头临时发送给后端，不保存到数据库。
 
-## 五、当前阶段：AI 后端服务接入准备
+## 五、当前阶段：AI 后端服务已接入，等待视觉模型配置
 
-Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证、后端接口 E2E 测试和前端自动化测试已完成。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client、列表真实联调、图片上传运行验证、后端接口 E2E 测试、AI Module/Service 和前端 AI 调用流程已完成。
 
 图片上传已接通：后端通过 `POST /memes` 接收 multipart 文件，保存到 `server/uploads/memes/`，并通过 `/uploads/memes/...` 提供静态访问；前端上传成功后会刷新 TanStack Query 列表。
 
 本阶段已完成以下验证：
 
 - 后端 E2E 测试覆盖上传、查询筛选、编辑、删除、静态图片访问、参数校验和 404 响应。
-- 前端测试覆盖 AI 分析失败状态及错误信息展示。
+- AI Service 单元测试覆盖成功 JSON 解析和失败状态持久化。
+- AI 分析接口 E2E 测试覆盖未配置视觉代理时的 `FAILED` 状态。
+- 前端测试覆盖上传后 AI 分析、重新分析入口、失败状态及错误信息展示。
 - 前后端生产构建均已通过。
 
-下一步按以下顺序继续：
+下一步：
 
-1. 创建后端 AI Module 和 AI Service。
-2. 固定默认分析提示词，并设计 AI 返回 JSON 的校验结构。
-3. 确认 DeepSeek 使用的模型是否支持图片输入，再接入非流式 API 调用。
+1. 在 `server/.env` 配置支持图片输入的 OpenAI 兼容视觉模型或图片代理地址：`AI_VISION_BASE_URL`。
+2. 使用真实 API Key 上传一张图片，验证 `PROCESSING` → `COMPLETED/FAILED` 状态流转。
+3. 根据实际视觉模型调整模型名和提示词。
 
-由于 AI 尚未接入，真实上传创建的 Meme 暂时标记为 `COMPLETED`，接入 AI 后再改为 `PROCESSING` → `COMPLETED/FAILED`。
+有 API Key 时，前端上传成功后会自动调用分析接口；没有 API Key 时保留 `COMPLETED`，可以在详情弹窗中配置 Key 后重新分析。
 
 ## 六、新对话启动提示词
 
@@ -194,7 +198,7 @@ Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Cl
 3. docs/project-architecture-guide.md
 
 请检查当前项目的 git status，并根据 TODO.md 的“下一步”继续。
-当前测试补充已完成，准备创建后端 AI Module 和 AI Service；先告诉我准备做什么，等我确认后再执行。
+当前 AI 后端服务已接入，下一步是配置视觉模型或图片代理并进行真实 API 冒烟测试；先告诉我准备做什么，等我确认后再执行。
 先告诉我准备做什么，等我确认后再执行。
 ```
 

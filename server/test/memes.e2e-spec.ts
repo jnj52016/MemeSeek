@@ -144,4 +144,42 @@ describe('Memes API (e2e)', () => {
       .delete(`/memes/${missingId}`)
       .expect(404);
   });
+
+  it('returns a failed meme state when image analysis is not configured', async () => {
+    const title = `e2e-${testRunId}-analysis`;
+    const createResponse = await request(app.getHttpServer())
+      .post('/memes')
+      .send({
+        imageUrl: 'https://example.test/e2e-analysis.png',
+        title,
+      })
+      .expect(201);
+    const memeId = createResponse.body.id;
+    createdMemeIds.add(memeId);
+
+    const previousVisionBaseUrl = process.env.AI_VISION_BASE_URL;
+    delete process.env.AI_VISION_BASE_URL;
+
+    try {
+      const response = await request(app.getHttpServer())
+        .post(`/memes/${memeId}/analyze`)
+        .set('x-deepseek-api-key', 'test-key')
+        .send({ model: 'deepseek-v4-flash' })
+        .expect(200);
+
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          id: memeId,
+          status: 'FAILED',
+        }),
+      );
+      expect(response.body.errorMessage).toContain('AI_VISION_BASE_URL');
+    } finally {
+      if (previousVisionBaseUrl === undefined) {
+        delete process.env.AI_VISION_BASE_URL;
+      } else {
+        process.env.AI_VISION_BASE_URL = previousVisionBaseUrl;
+      }
+    }
+  });
 });

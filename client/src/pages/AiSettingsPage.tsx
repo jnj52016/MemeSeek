@@ -134,8 +134,8 @@ function AiSettingsPage() {
                 }))
               }
               options={[
-                { value: 'deepseek-chat', label: 'deepseek-chat' },
-                { value: 'deepseek-reasoner', label: 'deepseek-reasoner' },
+                { value: 'deepseek-v4-flash', label: 'deepseek-v4-flash' },
+                { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro' },
               ]}
             />
           </div>

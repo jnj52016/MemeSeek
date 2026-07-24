@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调和测试补充，图片上传代码已接通并完成运行验证，当前进入 AI 后端服务接入准备阶段。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、测试补充和 AI 后端服务接入，当前等待配置视觉模型或图片代理进行真实 API 冒烟测试。
 
 当前阶段：
 
@@ -19,7 +19,9 @@ POST /memes multipart 上传、文件保存和静态访问已完成
   ↓
 后端接口测试和 AI 失败状态测试已完成
   ↓
-下一步：创建后端 AI Module 和 AI Service
+AI Module、AI Service、分析接口和前端重新分析流程已完成
+  ↓
+下一步：配置视觉模型或图片代理并进行真实 API 冒烟测试
 ```
 
 ## 二、已经完成的内容
@@ -91,7 +93,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 上传流程通过 `POST /memes` 使用 multipart 请求，上传成功后使 `['memes']` 查询失效并刷新列表。
 
-由于 AI 尚未接入，真实上传创建的 Meme 暂时使用 `COMPLETED` 状态；接入 AI 后再切换为 `PROCESSING` → `COMPLETED/FAILED`。
+有 API Key 时，前端上传成功后会自动调用 `/memes/:id/analyze`；没有 API Key 时，上传记录保留 `COMPLETED`，用户可以在详情弹窗中配置 Key 后重新分析。
 
 ### 关于 AI 请求
 
@@ -102,9 +104,8 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 ## 四、当前未完成的内容
 
 - 上传流程运行验证已完成。
-- DeepSeek 后端调用。
-- 后端 AI Module 和 AI Service。
-- AI 返回 JSON 校验、分析失败处理和重新分析接口。
+- 配置 `AI_VISION_BASE_URL` 指向支持图片输入的 OpenAI 兼容视觉模型或图片代理。
+- 使用真实 API Key 完成一次端到端图片分析验证。
 
 ## 五、下一步操作记录
 
@@ -131,7 +132,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 已接通 `POST /memes` 的 multipart 文件上传。图片保存到 `server/uploads/memes/`，后端通过 `/uploads` 提供静态访问，数据库 `imageUrl` 只保存访问地址；前端上传成功后刷新 TanStack Query 列表。
 
 已启动完整开发环境，验证上传图片可访问，并确认编辑、删除流程以及删除本地图片文件均正常。
-前端搜索 URL、上传失败、编辑、删除和 AI 分析失败状态测试已完成；后端 E2E 已覆盖上传、查询、编辑、删除、静态文件和错误响应，下一步开始接入 DeepSeek 后端 AI Service。
+前端搜索 URL、上传失败、编辑、删除和 AI 分析失败状态测试已完成；后端 E2E 已覆盖上传、查询、编辑、删除、静态文件、错误响应和未配置视觉代理时的 AI 失败状态。
 
 ### 已完成：后端接口和 AI 失败状态测试
 
@@ -144,6 +145,19 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 前端 `MemeDetailModal` 已补充 AI `FAILED` 状态及错误信息展示测试。后端 E2E、前端 Vitest 和前后端构建均已通过。
 
+### 已完成：AI 后端服务和前端分析流程
+
+新增 `server/src/ai/`，实现：
+
+- 固定后端分析提示词和 JSON 结构校验。
+- `POST /memes/:id/analyze` 分析接口。
+- `PROCESSING` → `COMPLETED/FAILED` 状态流转。
+- 保存标题、描述、标签和 OCR 文本。
+- API Key 通过 `x-deepseek-api-key` 请求头临时传递，不保存到数据库。
+- 前端上传后自动分析，以及失败梗图的“重新分析”操作。
+
+由于 DeepSeek 官方 V4 API 模型目前是文本模型，图片请求需要配置 `AI_VISION_BASE_URL`。项目已实现兼容 OpenAI Chat Completions 的调用和失败处理，但尚未使用真实视觉代理完成端到端请求。
+
 ## 六、新对话开始时使用的提示词
 
 ```text
@@ -155,7 +169,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 然后检查当前项目的 git status。
 请根据 project-status.md 的“下一步操作记录”继续开发。
-当前准备创建后端 AI Module 和 AI Service；先不要修改代码，先告诉我准备做什么。
+当前 AI 后端服务已接入，下一步是配置视觉模型或图片代理并进行真实 API 冒烟测试；先不要修改代码，先告诉我准备做什么。
 ```
 
 ## 七、更新规则

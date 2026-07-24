@@ -57,13 +57,30 @@ export interface paths {
         patch: operations["MemesController_update"];
         trace?: never;
     };
+    "/memes/{id}/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 重新分析梗图 */
+        post: operations["AiController_analyze"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         CreateMemeDto: {
             /** @example /uploads/memes/example.png */
-            imageUrl: string;
+            imageUrl?: string;
             /** @example 程序员加班 */
             title?: string;
             /** @example 用于描述这张梗图 */
@@ -136,6 +153,18 @@ export interface components {
              */
             tags?: string[];
         };
+        AnalyzeMemeDto: {
+            /** @example deepseek-v4-flash */
+            model?: string;
+            /**
+             * @example [
+             *       "猫",
+             *       "动物",
+             *       "吐槽"
+             *     ]
+             */
+            recommendedTags?: string[];
+        };
     };
     responses: never;
     parameters: never;
@@ -196,7 +225,24 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateMemeDto"];
+                "application/json": {
+                    /** Format: binary */
+                    file?: string;
+                    /** @example /uploads/memes/example.png */
+                    imageUrl?: string;
+                    title?: string;
+                    description?: string;
+                    tags?: string[];
+                };
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                    /** @example /uploads/memes/example.png */
+                    imageUrl?: string;
+                    title?: string;
+                    description?: string;
+                    tags?: string[];
+                };
             };
         };
         responses: {
@@ -281,6 +327,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateMemeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemeResponseDto"];
+                };
+            };
+            /** @description 梗图不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_analyze: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 当前本地会话使用的 DeepSeek API Key，不会保存到数据库 */
+                "x-deepseek-api-key": string;
+            };
+            path: {
+                /** @description 梗图 ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeMemeDto"];
             };
         };
         responses: {

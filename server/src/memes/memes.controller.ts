@@ -13,6 +13,7 @@ import {
 import {
   ApiBody,
   ApiConsumes,
+  ApiExtraModels,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -31,6 +32,7 @@ import type { MemeUploadFile } from '../storage/storage.service';
 
 @Controller('memes')
 @ApiTags('memes')
+@ApiExtraModels(CreateMemeDto)
 export class MemesController {
   constructor(private readonly memesService: MemesService) {}
 

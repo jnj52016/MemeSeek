@@ -269,7 +269,25 @@ DeepSeek
 第七步：以后需要实时展示时，再增加流式请求
 ```
 
-## 十一、参考资料
+## 十一、当前实现补充
+
+当前后端已经实现：
+
+```text
+前端 localStorage API Key
+        ↓ x-deepseek-api-key
+POST /memes/:id/analyze
+        ↓
+AiService 设置 PROCESSING
+        ↓
+AI_VISION_BASE_URL/chat/completions
+        ↓
+校验 JSON 并保存 COMPLETED，或保存 FAILED 和 errorMessage
+```
+
+`AI_VISION_BASE_URL` 必须指向支持图片输入的 OpenAI 兼容视觉模型或图片代理。官方 DeepSeek V4 API 模型是文本模型，不能直接完成图片识别，因此当前代码会在未配置该地址时明确记录分析失败。
+
+## 十二、参考资料
 
 - [DeepSeek Create Chat Completion](https://api-docs.deepseek.com/api/create-chat-completion/)
 - [DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/)

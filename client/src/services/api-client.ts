@@ -24,6 +24,12 @@ export type UploadMemeInput = {
   tags?: string[];
 };
 
+export type AnalyzeMemeInput = {
+  apiKey: string;
+  model?: string;
+  recommendedTags?: string[];
+};
+
 function unwrapResponse<T>(data: T | undefined, error: unknown): T {
   if (error) {
     const message =
@@ -41,9 +47,9 @@ function unwrapResponse<T>(data: T | undefined, error: unknown): T {
   return data;
 }
 
-function getUploadErrorMessage(payload: unknown): string {
+function getApiErrorMessage(payload: unknown, fallback: string): string {
   if (typeof payload !== 'object' || payload === null) {
-    return '图片上传失败';
+    return fallback;
   }
 
   const message = 'message' in payload ? payload.message : undefined;
@@ -56,7 +62,7 @@ function getUploadErrorMessage(payload: unknown): string {
     return message;
   }
 
-  return '图片上传失败';
+  return fallback;
 }
 
 export const memesApi = {
@@ -128,7 +134,7 @@ export const memesApi = {
         }
 
         if (request.status < 200 || request.status >= 300) {
-          reject(new Error(getUploadErrorMessage(payload)));
+          reject(new Error(getApiErrorMessage(payload, '图片上传失败')));
           return;
         }
 
@@ -155,6 +161,32 @@ export const memesApi = {
     });
 
     return unwrapResponse(response.data, response.error);
+  },
+
+  async analyze(id: string, input: AnalyzeMemeInput): Promise<Meme> {
+    const response = await fetch(
+      `${API_BASE_URL}/memes/${encodeURIComponent(id)}/analyze`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-deepseek-api-key': input.apiKey,
+        },
+        body: JSON.stringify({
+          model: input.model,
+          recommendedTags: input.recommendedTags,
+        }),
+      },
+    );
+    const payload = await response.json().catch(() => undefined);
+
+    if (!response.ok) {
+      throw new Error(
+        getApiErrorMessage(payload, 'AI 分析请求失败，请稍后重试'),
+      );
+    }
+
+    return payload as Meme;
   },
 };
 

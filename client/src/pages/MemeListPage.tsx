@@ -8,6 +8,7 @@ import MemeGrid from '../features/memes/components/MemeGrid'
 import MemeSearchBar from '../features/memes/components/MemeSearchBar'
 import MemeUploadDrawer from '../features/memes/components/MemeUploadDrawer'
 import { memesApi, type UpdateMemeInput } from '../services/api-client'
+import { loadAiSettings } from '../services/ai-settings-storage'
 import type { Meme } from '../types/meme'
 
 type UpdateMemeVariables = {
@@ -80,6 +81,24 @@ function MemeListPage() {
     await deleteMemeMutation.mutateAsync(memeToDelete.id)
   }
 
+  const handleAnalyzeMeme = async (memeToAnalyze: Meme) => {
+    const aiSettings = loadAiSettings()
+
+    if (!aiSettings.apiKey.trim()) {
+      throw new Error('请先在 AI 设置中配置 DeepSeek API Key。')
+    }
+
+    const analyzedMeme = await memesApi.analyze(memeToAnalyze.id, {
+      apiKey: aiSettings.apiKey.trim(),
+      model: aiSettings.model,
+      recommendedTags: aiSettings.recommendedTags,
+    })
+
+    setSelectedMeme(analyzedMeme)
+    await queryClient.invalidateQueries({ queryKey: ['memes'] })
+    return analyzedMeme
+  }
+
   const memes: Meme[] = memesQuery.data?.items ?? []
   const queryErrorMessage =
     memesQuery.error instanceof Error
@@ -143,6 +162,7 @@ function MemeListPage() {
         onClose={() => setSelectedMeme(null)}
         onUpdate={handleUpdateMeme}
         onDelete={handleDeleteMeme}
+        onAnalyze={handleAnalyzeMeme}
       />
 
       <MemeUploadDrawer

@@ -3,6 +3,7 @@ import { Alert, Button, Drawer, message, Progress, Upload } from 'antd'
 import type { UploadProps } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { memesApi } from '../../../services/api-client'
+import { loadAiSettings } from '../../../services/ai-settings-storage'
 import type { Meme } from '../../../types/meme'
 
 type MemeUploadDrawerProps = {
@@ -26,6 +27,7 @@ function MemeUploadDrawer({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('IDLE')
   const [progress, setProgress] = useState(0)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   const cancelledRef = useRef(false)
 
   useEffect(() => {
@@ -58,6 +60,7 @@ function MemeUploadDrawer({
     setPreviewUrl(URL.createObjectURL(file))
     setUploadStatus('IDLE')
     setProgress(0)
+    setAnalysisError(null)
     return false
   }
 
@@ -82,9 +85,10 @@ function MemeUploadDrawer({
     cancelledRef.current = false
     setProgress(0)
     setUploadStatus('UPLOADING')
+    setAnalysisError(null)
 
     try {
-      const meme = await memesApi.upload(
+      let meme = await memesApi.upload(
         selectedFile,
         { title: getTitleFromFileName(selectedFile.name) },
         (nextProgress) => {
@@ -98,10 +102,26 @@ function MemeUploadDrawer({
         return
       }
 
+      const aiSettings = loadAiSettings()
+
+      if (aiSettings.apiKey.trim()) {
+        meme = await memesApi.analyze(meme.id, {
+          apiKey: aiSettings.apiKey.trim(),
+          model: aiSettings.model,
+          recommendedTags: aiSettings.recommendedTags,
+        })
+      }
+
       setProgress(100)
       setUploadStatus('COMPLETED')
       onUploaded(meme)
-      message.success('梗图已上传并加入列表')
+
+      if (meme.status === 'FAILED') {
+        setAnalysisError(meme.errorMessage ?? 'AI 分析失败，请稍后重试')
+        message.warning('梗图已上传，但 AI 分析失败')
+      } else {
+        message.success('梗图已上传并加入列表')
+      }
     } catch (error) {
       if (cancelledRef.current) {
         return
@@ -168,8 +188,17 @@ function MemeUploadDrawer({
           <Progress percent={progress} status="active" />
         )}
 
-        {uploadStatus === 'COMPLETED' && (
+        {uploadStatus === 'COMPLETED' && !analysisError && (
           <Alert message="上传完成，梗图已加入列表" type="success" showIcon />
+        )}
+
+        {uploadStatus === 'COMPLETED' && analysisError && (
+          <Alert
+            message="上传完成，但 AI 分析失败"
+            description={analysisError}
+            type="warning"
+            showIcon
+          />
         )}
 
         {uploadStatus === 'FAILED' && (
