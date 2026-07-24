@@ -7,21 +7,27 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MemeStatus } from '@prisma/client';
 import { CreateMemeDto } from './dto/create-meme.dto';
 import { FindMemesDto } from './dto/find-memes.dto';
 import { MemeListResponseDto, MemeResponseDto } from './dto/meme-response.dto';
 import { UpdateMemeDto } from './dto/update-meme.dto';
 import { MemesService } from './memes.service';
+import { MAX_MEME_IMAGE_SIZE } from '../storage/storage.service';
+import type { MemeUploadFile } from '../storage/storage.service';
 
 @Controller('memes')
 @ApiTags('memes')
@@ -30,10 +36,33 @@ export class MemesController {
 
   @Post()
   @ApiOperation({ summary: '新增梗图' })
-  @ApiBody({ type: CreateMemeDto })
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        imageUrl: { type: 'string', example: '/uploads/memes/example.png' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        tags: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
   @ApiResponse({ status: 201, type: MemeResponseDto })
-  create(@Body() dto: CreateMemeDto) {
-    return this.memesService.create(dto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_MEME_IMAGE_SIZE },
+      fileFilter: (_request, file, callback) => {
+        callback(null, file.mimetype.startsWith('image/'));
+      },
+    }),
+  )
+  create(
+    @Body() dto: CreateMemeDto,
+    @UploadedFile() file?: MemeUploadFile,
+  ) {
+    return this.memesService.create(dto, file);
   }
 
   @Get()

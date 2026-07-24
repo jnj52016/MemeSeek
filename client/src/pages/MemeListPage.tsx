@@ -156,7 +156,9 @@ function MemeListPage() {
       <MemeUploadDrawer
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onUploaded={() => void memesQuery.refetch()}
+        onUploaded={() => {
+          void queryClient.invalidateQueries({ queryKey: ['memes'] })
+        }}
       />
     </AppLayout>
   )

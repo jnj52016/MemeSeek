@@ -1,18 +1,8 @@
-//这个是一个用于上传梗图的抽屉组件
-// 使用了 Ant Design 的 Drawer、Upload、Progress 和 Alert 组件。
-// 用户可以通过拖拽或点击上传图片，组件会显示图片预览，并模拟上传和 AI 分析的过程。
-// 上传状态包括空闲、上传中、分析中、完成和失败，每个状态对应不同的提示和按钮状态。
 import { InboxOutlined } from '@ant-design/icons'
-import {
-  Alert,
-  Button,
-  Drawer,
-  message,
-  Progress,
-  Upload,
-} from 'antd'
+import { Alert, Button, Drawer, message, Progress, Upload } from 'antd'
 import type { UploadProps } from 'antd'
 import { useEffect, useRef, useState } from 'react'
+import { memesApi } from '../../../services/api-client'
 import type { Meme } from '../../../types/meme'
 
 type MemeUploadDrawerProps = {
@@ -21,23 +11,7 @@ type MemeUploadDrawerProps = {
   onUploaded: (meme: Meme) => void
 }
 
-// 上传流程的状态机：每个状态对应抽屉中的不同提示和按钮状态。
-type UploadStatus =
-  | 'IDLE'
-  | 'UPLOADING'
-  | 'ANALYZING'
-  | 'COMPLETED'
-  | 'FAILED'
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
+type UploadStatus = 'IDLE' | 'UPLOADING' | 'COMPLETED' | 'FAILED'
 
 function getTitleFromFileName(fileName: string) {
   return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传梗图'
@@ -48,35 +22,15 @@ function MemeUploadDrawer({
   onClose,
   onUploaded,
 }: MemeUploadDrawerProps) {
-  // selectedFile 是用户当前选择、准备上传的图片文件。
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-
-  // previewUrl 是本地生成的临时预览地址，不是后端图片地址。
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-
-  // uploadStatus 控制上传进度、AI 分析中、成功和失败等页面状态。
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('IDLE')
-
-  // progress 保存模拟上传进度，取值范围为 0 到 100。
   const [progress, setProgress] = useState(0)
-
-  // 下面的 Ref 保存定时器和流程控制值，避免定时器变化触发重新渲染。
-  const uploadTimerRef = useRef<number | null>(null)
-  const analysisTimerRef = useRef<number | null>(null)
-  const progressRef = useRef(0)
   const cancelledRef = useRef(false)
 
   useEffect(() => {
     return () => {
       cancelledRef.current = true
-
-      if (uploadTimerRef.current !== null) {
-        window.clearInterval(uploadTimerRef.current)
-      }
-
-      if (analysisTimerRef.current !== null) {
-        window.clearTimeout(analysisTimerRef.current)
-      }
     }
   }, [])
 
@@ -116,87 +70,51 @@ function MemeUploadDrawer({
 
   const handleClose = () => {
     cancelledRef.current = true
-
-    if (uploadTimerRef.current !== null) {
-      window.clearInterval(uploadTimerRef.current)
-      uploadTimerRef.current = null
-    }
-
-    if (analysisTimerRef.current !== null) {
-      window.clearTimeout(analysisTimerRef.current)
-      analysisTimerRef.current = null
-    }
-
     handleClear()
     onClose()
   }
 
-  const finishMockUpload = async () => {
-    if (!selectedFile || cancelledRef.current) {
-      return
-    }
-
-    try {
-      const imageUrl = await fileToDataUrl(selectedFile)
-
-      if (cancelledRef.current) {
-        return
-      }
-
-      const now = new Date().toISOString()
-
-      onUploaded({
-        id: `meme-${Date.now()}`,
-        imageUrl,
-        title: getTitleFromFileName(selectedFile.name),
-        description: 'Mock AI 生成的梗图描述。',
-        tags: ['待整理'],
-        ocrText: '',
-        status: 'COMPLETED',
-        createdAt: now,
-        updatedAt: now,
-      })
-
-      setUploadStatus('COMPLETED')
-      message.success('梗图已加入列表')
-    } catch {
-      setUploadStatus('FAILED')
-      message.error('Mock 上传失败，请重试')
-    }
-  }
-
-  const handleMockUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile || uploadStatus !== 'IDLE') {
       return
     }
 
     cancelledRef.current = false
-    progressRef.current = 0
     setProgress(0)
     setUploadStatus('UPLOADING')
 
-    uploadTimerRef.current = window.setInterval(() => {
-      const nextProgress = Math.min(progressRef.current + 20, 100)
-      progressRef.current = nextProgress
-      setProgress(nextProgress)
+    try {
+      const meme = await memesApi.upload(
+        selectedFile,
+        { title: getTitleFromFileName(selectedFile.name) },
+        (nextProgress) => {
+          if (!cancelledRef.current) {
+            setProgress(nextProgress)
+          }
+        },
+      )
 
-      if (nextProgress === 100) {
-        if (uploadTimerRef.current !== null) {
-          window.clearInterval(uploadTimerRef.current)
-          uploadTimerRef.current = null
-        }
-
-        setUploadStatus('ANALYZING')
-        analysisTimerRef.current = window.setTimeout(() => {
-          void finishMockUpload()
-        }, 1200)
+      if (cancelledRef.current) {
+        return
       }
-    }, 300)
+
+      setProgress(100)
+      setUploadStatus('COMPLETED')
+      onUploaded(meme)
+      message.success('梗图已上传并加入列表')
+    } catch (error) {
+      if (cancelledRef.current) {
+        return
+      }
+
+      setUploadStatus('FAILED')
+      message.error(
+        error instanceof Error ? error.message : '图片上传失败，请重试',
+      )
+    }
   }
 
-  // isProcessing 用于统一控制上传过程中的禁用状态。
-  const isProcessing =
-    uploadStatus === 'UPLOADING' || uploadStatus === 'ANALYZING'
+  const isProcessing = uploadStatus === 'UPLOADING'
 
   return (
     <Drawer
@@ -208,7 +126,7 @@ function MemeUploadDrawer({
     >
       <div className="space-y-6">
         <Upload.Dragger
-          name="meme"
+          name="file"
           accept="image/*"
           multiple={false}
           disabled={isProcessing || uploadStatus === 'COMPLETED'}
@@ -250,16 +168,12 @@ function MemeUploadDrawer({
           <Progress percent={progress} status="active" />
         )}
 
-        {uploadStatus === 'ANALYZING' && (
-          <Alert message="AI 正在分析图片，请稍候" type="info" showIcon />
-        )}
-
         {uploadStatus === 'COMPLETED' && (
-          <Alert message="分析完成，梗图已加入列表" type="success" showIcon />
+          <Alert message="上传完成，梗图已加入列表" type="success" showIcon />
         )}
 
         {uploadStatus === 'FAILED' && (
-          <Alert message="处理失败，可以重新尝试上传" type="error" showIcon />
+          <Alert message="上传失败，可以重新尝试" type="error" showIcon />
         )}
 
         <div className="flex justify-end gap-3">
@@ -267,9 +181,9 @@ function MemeUploadDrawer({
           <Button
             type="primary"
             disabled={!selectedFile || isProcessing || uploadStatus === 'COMPLETED'}
-            onClick={handleMockUpload}
+            onClick={() => void handleUpload()}
           >
-            {isProcessing ? '处理中...' : '开始上传'}
+            {isProcessing ? '上传中...' : '开始上传'}
           </Button>
         </div>
       </div>

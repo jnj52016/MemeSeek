@@ -1,23 +1,51 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { MemeStatus, Prisma } from '@prisma/client';
 import { CreateMemeDto } from './dto/create-meme.dto';
 import { FindMemesDto } from './dto/find-memes.dto';
 import { UpdateMemeDto } from './dto/update-meme.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  MemeUploadFile,
+  StorageService,
+} from '../storage/storage.service';
 
 @Injectable()
 export class MemesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
-  create(dto: CreateMemeDto) {
-    return this.prisma.meme.create({
-      data: {
-        imageUrl: dto.imageUrl,
-        title: dto.title,
-        description: dto.description,
-        tags: dto.tags,
-      },
-    });
+  async create(dto: CreateMemeDto, file?: MemeUploadFile) {
+    if (!dto.imageUrl && !file) {
+      throw new BadRequestException('请提供 imageUrl 或上传图片文件');
+    }
+
+    const imageUrl = file
+      ? await this.storage.saveMemeImage(file)
+      : dto.imageUrl!;
+
+    try {
+      return await this.prisma.meme.create({
+        data: {
+          imageUrl,
+          title: dto.title,
+          description: dto.description,
+          tags: dto.tags,
+          ...(file ? { status: MemeStatus.COMPLETED } : {}),
+        },
+      });
+    } catch (error) {
+      if (file) {
+        await this.storage.removeMemeImage(imageUrl).catch(() => undefined);
+      }
+
+      throw error;
+    }
   }
 
   async findAll(query: FindMemesDto) {
@@ -78,8 +106,12 @@ export class MemesService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const meme = await this.findOne(id);
 
-    return this.prisma.meme.delete({ where: { id } });
+    const deletedMeme = await this.prisma.meme.delete({ where: { id } });
+
+    await this.storage.removeMemeImage(meme.imageUrl);
+
+    return deletedMeme;
   }
 }

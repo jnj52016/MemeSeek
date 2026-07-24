@@ -1,5 +1,6 @@
 // 这个是一个 MemeCard 组件，用于显示单个 meme 的信息，包括图片和标题。用户可以点击卡片查看详情。
 import { Tag } from 'antd'
+import { resolveMemeImageUrl } from '../../../services/api-client'
 import type { Meme } from '../../../types/meme'
 
 type MemeCardProps = {
@@ -22,7 +23,7 @@ function MemeCard({ meme, onClick }: MemeCardProps) {
       className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
     >
       <img
-        src={meme.imageUrl}
+        src={resolveMemeImageUrl(meme.imageUrl)}
         alt={meme.title}
         loading="lazy"
         className="h-44 w-full object-cover"

@@ -2,16 +2,18 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client 和列表真实联调，下一阶段进入图片上传。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client 和列表真实联调，图片上传代码已接通，当前进入运行验证。
 
-当前下一步：
+当前阶段：
 
 ```text
 Prisma Schema 和数据库迁移已完成
   ↓
 PrismaModule 和 PrismaService 已完成
   ↓
-下一步：接通图片上传流程
+POST /memes multipart 上传、文件保存和静态访问已完成
+  ↓
+下一步：验证上传、查询、编辑和删除闭环
 ```
 
 ## 二、已经完成的内容
@@ -35,7 +37,7 @@ PrismaModule 和 PrismaService 已完成
 - 梗图详情弹窗。
 - 编辑标题、描述和标签。
 - 删除梗图和删除确认弹窗。
-- 上传抽屉、预览、模拟上传进度和分析中状态。
+- 上传抽屉、预览、真实上传进度和上传结果状态。
 - 加载 Skeleton。
 - 暂无梗图状态。
 - 搜索无结果状态。
@@ -75,13 +77,15 @@ PrismaModule 和 PrismaService 已完成
 
 ### 关于数据来源
 
-当前页面使用 Mock 数据：
+当前页面列表已经使用 TanStack Query 请求后端真实数据；Mock 数据仍保留用于开发参考：
 
 ```ts
 const [memes, setMemes] = useState<Meme[]>(mockMemes)
 ```
 
-后端 CRUD 完成后，改为使用 TanStack Query 请求真实数据。
+上传流程通过 `POST /memes` 使用 multipart 请求，上传成功后使 `['memes']` 查询失效并刷新列表。
+
+由于 AI 尚未接入，真实上传创建的 Meme 暂时使用 `COMPLETED` 状态；接入 AI 后再切换为 `PROCESSING` → `COMPLETED/FAILED`。
 
 ### 关于 AI 请求
 
@@ -91,9 +95,8 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 ## 四、当前未完成的内容
 
-- 前后端真实联调。
+- 上传流程运行验证。
 - DeepSeek 后端调用。
-- 真实图片保存。
 - 测试。
 
 ## 五、下一步操作记录
@@ -118,7 +121,9 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 ### 下一步：图片上传
 
-接通 `POST /memes` 的 multipart 文件上传，保存图片并将新记录刷新到 TanStack Query 列表。
+已接通 `POST /memes` 的 multipart 文件上传。图片保存到 `server/uploads/memes/`，后端通过 `/uploads` 提供静态访问，数据库 `imageUrl` 只保存访问地址；前端上传成功后刷新 TanStack Query 列表。
+
+接下来启动完整开发环境，验证上传图片可访问，并确认编辑、删除流程以及删除本地图片文件均正常。
 
 ## 六、新对话开始时使用的提示词
 

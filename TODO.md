@@ -6,7 +6,7 @@
 
 ## 一、当前进度
 
-项目已经完成前端 Mock MVP，现在进入后端数据库初始化阶段。
+项目已经完成前端 Mock MVP、后端 CRUD 和前后端列表联调，现在进入图片上传闭环验证阶段。
 
 ```text
 前端 Mock 页面已完成
@@ -17,7 +17,9 @@ Prisma + Meme 数据库模型和首次迁移已完成
         ↓
 Prisma Module 和 Prisma Service 已完成
         ↓
-下一步：接通图片上传流程
+图片上传接口、后端本地保存和前端真实上传流程已完成
+        ↓
+下一步：运行环境验证上传、查询、编辑和删除闭环
 ```
 
 说明：数据库迁移、Prisma Client 生成、后端构建和 E2E 启动测试均已通过。
@@ -51,7 +53,7 @@ Prisma Module 和 Prisma Service 已完成
 - [x] URL 搜索参数 `?q=`。
 - [x] 梗图卡片和网格布局。
 - [x] 上传梗图抽屉。
-- [x] 图片预览和模拟上传进度。
+- [x] 图片预览和真实上传进度。
 - [x] AI 分析中的状态。
 - [x] 梗图详情弹窗。
 - [x] 编辑标题、描述和标签。
@@ -106,7 +108,7 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 实现 `GET /memes/:id`。
 - [x] 实现 `PATCH /memes/:id`。
 - [x] 实现 `DELETE /memes/:id`。
-- [ ] 配置图片本地保存和静态访问。
+- [x] 配置图片本地保存和静态访问。
 
 ### Swagger 和前后端联调
 
@@ -152,16 +154,19 @@ Prisma Module 和 Prisma Service 已完成
 - 流式请求以后用于自然语言搜索或长文本生成。
 - 当前还需要确认 DeepSeek 使用的模型是否支持图片输入，必要时增加视觉模型。
 
-## 五、当前阶段：前端真实联调
+## 五、当前阶段：图片上传闭环
 
-Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client 和列表真实联调已完成，并已通过前后端构建和接口验证。
+Meme CRUD、请求 DTO、全局参数校验、Swagger 文档、前端 OpenAPI Client 和列表真实联调已完成。
+
+图片上传已接通：后端通过 `POST /memes` 接收 multipart 文件，保存到 `server/uploads/memes/`，并通过 `/uploads/memes/...` 提供静态访问；前端上传成功后会刷新 TanStack Query 列表。
 
 下一步按以下顺序继续：
 
-1. 接通图片上传流程，并将上传文件保存到后端。
-2. 将上传成功后的记录刷新到 TanStack Query 列表。
+1. 启动 Node.js、PostgreSQL、后端和前端，验证真实上传流程。
+2. 验证上传图片的访问、编辑、删除以及删除图片文件。
+3. 补充上传失败和编辑删除测试。
 
-本阶段仍然先不接 DeepSeek，图片上传可以在基础 CRUD 联调稳定后再实现。
+本阶段仍然先不接 DeepSeek。由于 AI 尚未接入，真实上传创建的 Meme 暂时标记为 `COMPLETED`，接入 AI 后再改为 `PROCESSING` → `COMPLETED/FAILED`。
 
 ## 六、新对话启动提示词
 

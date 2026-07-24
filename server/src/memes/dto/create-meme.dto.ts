@@ -1,15 +1,15 @@
 import {
   IsArray,
-  IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateMemeDto {
-  @ApiProperty({ example: '/uploads/memes/example.png' })
+  @ApiPropertyOptional({ example: '/uploads/memes/example.png' })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   imageUrl!: string;
 
   @ApiPropertyOptional({ example: '程序员加班' })
@@ -24,6 +24,9 @@ export class CreateMemeDto {
 
   @ApiPropertyOptional({ example: ['程序员', '加班'], type: [String] })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? value : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
   @IsString({ each: true })
   tags?: string[];

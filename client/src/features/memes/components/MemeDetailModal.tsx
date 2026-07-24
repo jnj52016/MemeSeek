@@ -9,6 +9,7 @@ import {
   Tag,
 } from 'antd'
 import { useState } from 'react'
+import { resolveMemeImageUrl } from '../../../services/api-client'
 import type { Meme, MemeStatus } from '../../../types/meme'
 
 type MemeDetailModalProps = {
@@ -138,7 +139,7 @@ function MemeDetailModal({
       {meme && (
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_240px]">
           <img
-            src={meme.imageUrl}
+            src={resolveMemeImageUrl(meme.imageUrl)}
             alt={meme.title}
             className="max-h-[520px] w-full rounded-xl object-contain"
           />
