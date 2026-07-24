@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、测试补充、AI 后端服务接入和分析 AI / 内容 AI 配置拆分，当前等待使用真实 OpenAI API Key 进行视觉分析冒烟测试。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、测试补充、AI 后端服务接入、分析 AI / 内容 AI 配置拆分和真实 OpenAI 视觉模型验证。
 
 当前阶段：
 
@@ -21,7 +21,9 @@ POST /memes multipart 上传、文件保存和静态访问已完成
   ↓
 AI Module、AI Service、分析接口和前端重新分析流程已完成
   ↓
-下一步：运行配置拆分后的测试和构建，并进行真实 OpenAI API 冒烟测试
+真实 OpenAI 视觉模型端到端验证已完成
+  ↓
+下一步：运行完整自动化测试和构建，并整理项目材料
 ```
 
 ## 二、已经完成的内容
@@ -107,8 +109,8 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 - 上传流程运行验证已完成。
 - 在 `AI_BASE_URL` 配置 OpenAI API 地址，默认使用 `https://api.openai.com/v1`。
-- 使用真实 OpenAI API Key 完成一次端到端图片分析验证。
-- 配置拆分后的前端测试、前端构建、后端测试和后端构建需要重新运行。
+- 配置拆分后的前端测试、前端构建、后端测试和后端构建需要重新运行；当前运行环境缺少可用的 Node.js / pnpm，且依赖目录存在读取权限限制。
+- 将界面截图保存到 `docs/screenshots/`，并补充架构图、流程图和演示流程。
 
 ## 五、下一步操作记录
 
@@ -159,7 +161,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 - API Key 通过 `x-ai-api-key` 请求头临时传递，不保存到数据库。
 - 前端上传后自动分析，以及失败梗图的“重新分析”操作。
 
-项目已实现 OpenAI Chat Completions 视觉调用和失败处理；当前还需要重新运行自动化校验，并使用真实 OpenAI API Key 完成端到端请求验证。
+项目已实现 OpenAI Chat Completions 视觉调用和失败处理，真实 OpenAI API Key 端到端视觉分析验证已完成；后续需要重新运行自动化校验，并整理截图、架构图、流程图和演示材料。
 
 ## 六、新对话开始时使用的提示词
 
@@ -172,7 +174,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 然后检查当前项目的 git status。
 请根据 project-status.md 的“下一步操作记录”继续开发。
-当前 AI 后端服务和分析 AI / 内容 AI 配置拆分已完成，下一步是运行测试和构建，再使用真实 OpenAI API 进行冒烟测试；先不要修改代码，先告诉我准备做什么。
+当前 AI 后端服务、分析 AI / 内容 AI 配置拆分和真实 OpenAI 视觉模型验证已完成，下一步是运行测试和构建，再整理截图、架构图、流程图和演示材料；先检查当前状态并告诉我准备做什么。
 ```
 
 ## 七、更新规则

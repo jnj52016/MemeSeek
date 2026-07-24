@@ -1,6 +1,7 @@
 import { InboxOutlined } from '@ant-design/icons'
 import { Alert, Button, Drawer, message, Progress, Upload } from 'antd'
 import type { UploadProps } from 'antd'
+import type { ClipboardEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { memesApi } from '../../../services/api-client'
 import { loadAiSettings } from '../../../services/ai-settings-storage'
@@ -16,6 +17,17 @@ type UploadStatus = 'IDLE' | 'UPLOADING' | 'COMPLETED' | 'FAILED'
 
 function getTitleFromFileName(fileName: string) {
   return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传梗图'
+}
+
+function getPastedFileName(mimeType: string) {
+  const extensionByMimeType: Record<string, string> = {
+    'image/gif': 'gif',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  }
+
+  return `pasted-image-${Date.now()}.${extensionByMimeType[mimeType] ?? 'png'}`
 }
 
 function MemeUploadDrawer({
@@ -44,7 +56,7 @@ function MemeUploadDrawer({
     return () => URL.revokeObjectURL(previewUrl)
   }, [previewUrl])
 
-  const handleBeforeUpload: UploadProps['beforeUpload'] = (file) => {
+  const selectFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       message.error('请选择图片文件')
       return false
@@ -64,11 +76,49 @@ function MemeUploadDrawer({
     return false
   }
 
+  const handleBeforeUpload: UploadProps['beforeUpload'] = (file) =>
+    selectFile(file)
+
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    if (!open || isProcessing || uploadStatus === 'COMPLETED') {
+      return
+    }
+
+    const imageItem = Array.from(event.clipboardData.items).find((item) =>
+      item.type.startsWith('image/'),
+    )
+
+    if (!imageItem) {
+      message.info('剪贴板中没有图片，请先复制一张图片')
+      return
+    }
+
+    const pastedFile = imageItem.getAsFile()
+
+    if (!pastedFile) {
+      event.preventDefault()
+      message.error('无法读取剪贴板中的图片，请改用拖拽或文件选择')
+      return
+    }
+
+    event.preventDefault()
+
+    const file = pastedFile.name.trim()
+      ? pastedFile
+      : new File([pastedFile], getPastedFileName(imageItem.type), {
+          type: pastedFile.type || imageItem.type,
+          lastModified: Date.now(),
+        })
+
+    selectFile(file)
+  }
+
   const handleClear = () => {
     setSelectedFile(null)
     setPreviewUrl(null)
     setUploadStatus('IDLE')
     setProgress(0)
+    setAnalysisError(null)
   }
 
   const handleClose = () => {
@@ -146,20 +196,30 @@ function MemeUploadDrawer({
       onClose={handleClose}
     >
       <div className="space-y-6">
-        <Upload.Dragger
-          name="file"
-          accept="image/*"
-          multiple={false}
-          disabled={isProcessing || uploadStatus === 'COMPLETED'}
-          showUploadList={false}
-          beforeUpload={handleBeforeUpload}
+        <div
+          aria-label="图片上传区域，支持点击、拖拽或粘贴图片"
+          className="rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+          data-testid="meme-upload-zone"
+          onClick={(event) => event.currentTarget.focus()}
+          onPaste={handlePaste}
+          role="region"
+          tabIndex={0}
         >
-          <p className="ant-upload-drag-icon">
-            <InboxOutlined />
-          </p>
-          <p className="ant-upload-text">点击或拖拽图片到这里上传</p>
-          <p className="ant-upload-hint">支持常见图片格式，大小不超过 10MB</p>
-        </Upload.Dragger>
+          <Upload.Dragger
+            name="file"
+            accept="image/*"
+            multiple={false}
+            disabled={isProcessing || uploadStatus === 'COMPLETED'}
+            showUploadList={false}
+            beforeUpload={handleBeforeUpload}
+          >
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text">点击、拖拽或 Ctrl+V 粘贴图片</p>
+            <p className="ant-upload-hint">支持常见图片格式，大小不超过 10MB</p>
+          </Upload.Dragger>
+        </div>
 
         {previewUrl && selectedFile && (
           <div className="space-y-3">
