@@ -110,7 +110,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 - 上传流程运行验证已完成。
 - 在 `AI_BASE_URL` 配置 OpenAI API 地址，默认使用 `https://api.openai.com/v1`。
 - 配置拆分后的前端测试、前端构建、后端测试和后端构建需要重新运行；当前运行环境缺少可用的 Node.js / pnpm，且依赖目录存在读取权限限制。
-- 将界面截图保存到 `docs/screenshots/`，并补充架构图、流程图和演示流程。
+- 将界面截图保存到 `docs/screenshots/`；README 已补充架构图和流程说明，演示脚本已整理到 `docs/demo-flow.md`。
 
 ## 五、下一步操作记录
 
@@ -161,7 +161,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 - API Key 通过 `x-ai-api-key` 请求头临时传递，不保存到数据库。
 - 前端上传后自动分析，以及失败梗图的“重新分析”操作。
 
-项目已实现 OpenAI Chat Completions 视觉调用和失败处理，真实 OpenAI API Key 端到端视觉分析验证已完成；后续需要重新运行自动化校验，并整理截图、架构图、流程图和演示材料。
+项目已实现 OpenAI Chat Completions 视觉调用和失败处理，真实 OpenAI API Key 端到端视觉分析验证已完成；后续需要重新运行自动化校验，并补充实际截图和演示材料。
 
 ## 六、新对话开始时使用的提示词
 
