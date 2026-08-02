@@ -31,6 +31,8 @@ Prisma Module 和 Prisma Service 已完成
         ↓
 视频媒体数据模型、磁盘上传、视频预览、浏览器首帧封面和首帧分析代码已接入
         ↓
+Docker Compose 完整运行环境已完成，支持自动迁移、数据持久化和容器自动重启
+        ↓
 下一步：手动验证视频首帧封面上传和前端自动分析流程
 ```
 
@@ -93,6 +95,14 @@ Prisma Module 和 Prisma Service 已完成
 - [x] 数据库端口：`localhost:5432`。
 - [x] 容器状态：`healthy`。
 - [x] 数据卷：`memeseek_postgres_data`。
+
+### Docker 完整应用容器化
+
+- [x] 使用多阶段 `Dockerfile` 构建 NestJS API 和 Nginx 前端镜像。
+- [x] `docker-compose.yml` 一次编排 PostgreSQL、API 和前端服务。
+- [x] API 容器启动时自动执行 Prisma 数据库迁移。
+- [x] 数据库和上传媒体使用 Docker Volume 持久化。
+- [x] 增加 `start-memeseek.cmd`，支持无需打开 IDE 和手动执行 `pnpm dev` 启动项目。
 
 ## 三、遗留问题
 

@@ -25,6 +25,8 @@ AI Module、AI Service、分析接口和前端重新分析流程已完成
   ↓
 视频上传数据模型、磁盘上传、媒体校验、前端视频预览、浏览器首帧封面和视觉 AI 分析代码已接入
   ↓
+Docker Compose 完整运行环境已完成，支持 PostgreSQL、NestJS API、Nginx 前端、自动迁移和持久化
+  ↓
 下一步：手动验证视频首帧封面上传和前端自动分析流程
 ```
 
@@ -38,6 +40,7 @@ AI Module、AI Service、分析接口和前端重新分析流程已完成
 - 项目使用 pnpm workspace。
 - Node.js 版本为 23。
 - pnpm 版本为 9.11.0。
+- 已提供完整 Docker Compose 运行环境；日常启动不再需要手动执行 `pnpm dev`。
 
 ### 前端页面
 
@@ -111,7 +114,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 
 - 上传流程运行验证已完成。
 - 在 `AI_BASE_URL` 配置 OpenAI API 地址，默认使用 `https://api.openai.com/v1`。
-- 配置拆分后的前端测试、前端构建、后端测试和后端构建需要重新运行；当前运行环境缺少可用的 Node.js / pnpm，且依赖目录存在读取权限限制。
+- 配置拆分后的自动化测试尚未运行；本轮 Docker 构建已验证前端和后端生产构建可以完成。
 - 将界面截图保存到 `docs/screenshots/`；README 已补充架构图和流程说明，演示脚本已整理到 `docs/demo-flow.md`。
 - 视频首帧和视频 AI 分析代码已经接入，仍待浏览器环境下的手动验收；本阶段明确不实现音频提取和语音转写。
 

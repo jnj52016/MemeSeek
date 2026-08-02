@@ -17,5 +17,49 @@ services:
       timeout: 5s
       retries: 10
 
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+    container_name: memeseek-server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-memeseek}:${POSTGRES_PASSWORD:-memeseek_dev_password}@postgres:5432/${POSTGRES_DB:-memeseek}?schema=public'
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:5173}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4o}
+      MEME_VIDEO_MAX_SIZE_MB: ${MEME_VIDEO_MAX_SIZE_MB:-500}
+    ports:
+      - '${SERVER_PORT:-3000}:3000'
+    volumes:
+      - uploads_data:/app/server/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: client
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    container_name: memeseek-client
+    restart: unless-stopped
+    ports:
+      - '${CLIENT_PORT:-5173}:80'
+    depends_on:
+      server:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  uploads_data:
