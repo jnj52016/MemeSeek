@@ -8,7 +8,7 @@ import {
   Popconfirm,
   Tag,
 } from 'antd'
-import { FolderOpenOutlined } from '@ant-design/icons'
+import { CopyOutlined, FolderOpenOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { resolveMemeMediaUrl } from '../../../services/api-client'
 import type { Meme, MemeStatus } from '../../../types/meme'
@@ -61,6 +61,7 @@ function MemeDetailModal({
   const [newTag, setNewTag] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpeningLocation, setIsOpeningLocation] = useState(false)
+  const [isCopyingFilePath, setIsCopyingFilePath] = useState(false)
 
   const handleStartEditing = () => {
     if (!meme) {
@@ -167,6 +168,30 @@ function MemeDetailModal({
     }
   }
 
+  const handleCopyFilePath = async () => {
+    if (!meme) {
+      return
+    }
+
+    setIsCopyingFilePath(true)
+
+    try {
+      const mediaUrl = resolveMemeMediaUrl(meme.imageUrl)
+      const copyablePath = new URL(mediaUrl, window.location.origin).toString()
+
+      await navigator.clipboard.writeText(copyablePath)
+      message.success('文件路径已复制，可粘贴到浏览器打开或下载')
+    } catch (error) {
+      message.error(
+        error instanceof Error
+          ? `文件路径复制失败：${error.message}`
+          : '文件路径复制失败，请检查浏览器剪贴板权限',
+      )
+    } finally {
+      setIsCopyingFilePath(false)
+    }
+  }
+
   const handleAnalyze = async () => {
     if (!meme || !onAnalyze) {
       return
@@ -230,6 +255,16 @@ function MemeDetailModal({
                 onClick={() => void handleOpenLocation()}
               >
                 打开文件所在位置
+              </Button>
+            )}
+            {meme.imageUrl.startsWith('/uploads/memes/') && (
+              <Button
+                block
+                icon={<CopyOutlined />}
+                loading={isCopyingFilePath}
+                onClick={() => void handleCopyFilePath()}
+              >
+                复制文件路径
               </Button>
             )}
           </div>

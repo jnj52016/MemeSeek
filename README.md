@@ -109,9 +109,7 @@ MemeSeek/
 │  ├─ prisma/                      # Schema 和数据库迁移
 │  └─ uploads/memes/               # 本地上传图片
 ├─ docs/                           # 开发计划、状态和架构文档
-├─ Dockerfile                      # 前后端生产镜像
-├─ docker-compose.yml              # 完整本地运行环境
-├─ nginx.conf                      # 前端静态文件和 API 反向代理
+├─ docker-compose.yml              # PostgreSQL 本地环境
 └─ TODO.md                         # 项目进度和后续任务
 ```
 
@@ -149,14 +147,6 @@ pnpm install
 ```bash
 docker compose up -d
 ```
-
-如果希望一次启动完整应用（PostgreSQL、NestJS API 和前端），见 [`docs/docker.md`](docs/docker.md)：
-
-```bash
-docker compose up -d --build
-```
-
-之后访问 http://localhost:5173 即可，不需要再执行 `pnpm dev`。也可以双击根目录的 `start-memeseek.cmd`。开启 Docker Desktop 的 “Start Docker Desktop when you sign in” 后，Windows 登录时容器会自动恢复。
 
 默认数据库配置为：
 
