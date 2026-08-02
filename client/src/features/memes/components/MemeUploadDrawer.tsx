@@ -187,7 +187,9 @@ function MemeUploadDrawer({
 
       const aiSettings = loadAiSettings()
 
-      if (meme.mediaType === 'IMAGE' && aiSettings.analysis.apiKey.trim()) {
+      // 只有明确是视频时才跳过当前的图片 AI 分析；兼容迁移前后端暂时未返回
+      // mediaType 的旧图片记录，避免图片上传被误判为无需分析。
+      if (meme.mediaType !== 'VIDEO' && aiSettings.analysis.apiKey.trim()) {
         meme = await memesApi.analyze(meme.id, {
           baseUrl: aiSettings.analysis.baseUrl,
           apiKey: aiSettings.analysis.apiKey.trim(),
