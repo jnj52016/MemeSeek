@@ -1,29 +1,24 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   NotFoundException,
   OnModuleInit,
   PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { diskStorage } from 'multer';
-import { exec, execFile, spawn } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import {
   mkdir,
   open,
   readFile,
   rename,
-  rm,
   stat,
   unlink,
   writeFile,
 } from 'node:fs/promises';
-import { promisify } from 'node:util';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
-
-const execFileAsync = promisify(execFile);
 
 export const MEME_UPLOAD_DIRECTORY = join(
   __dirname,
@@ -34,6 +29,7 @@ export const MEME_UPLOAD_DIRECTORY = join(
 );
 
 export const MAX_MEME_IMAGE_SIZE = 10 * 1024 * 1024;
+export const MAX_MEME_THUMBNAIL_SIZE = 2 * 1024 * 1024;
 
 function getMaxVideoSize() {
   const configuredSizeInMb = Number(process.env.MEME_VIDEO_MAX_SIZE_MB ?? 500);
@@ -48,7 +44,6 @@ export const MAX_MEME_UPLOAD_SIZE = Math.max(
   MAX_MEME_IMAGE_SIZE,
   MAX_MEME_VIDEO_SIZE,
 );
-export const SHORT_ANIMATED_IMAGE_MAX_DURATION = 3;
 
 export const IMAGE_EXTENSIONS: Record<string, string> = {
   'image/gif': 'gif',
@@ -68,7 +63,7 @@ export const ANIMATED_IMAGE_MIME_TYPES = new Set([
   'image/webp',
 ]);
 
-export function isAnimatedImageMimeType(mimeType: string | undefined) {
+export function isAnimatedImageMimeType(mimeType: string | null | undefined) {
   return ANIMATED_IMAGE_MIME_TYPES.has(mimeType?.toLowerCase() ?? '');
 }
 
@@ -98,12 +93,6 @@ export type SavedMemeMedia = {
   mimeType: string;
   thumbnailUrl: string | null;
   duration: number | null;
-};
-
-export type MemeVideoKeyframe = {
-  timestamp: number;
-  buffer: Buffer;
-  mimeType: string;
 };
 
 const IMAGE_MIME_TYPES: Record<string, string> = Object.fromEntries(
@@ -154,20 +143,23 @@ export function createMemeUploadStorage() {
 
 @Injectable()
 export class StorageService implements OnModuleInit {
-  private readonly logger = new Logger(StorageService.name);
   private readonly memeUploadDirectory = MEME_UPLOAD_DIRECTORY;
 
   async onModuleInit() {
     await mkdir(this.memeUploadDirectory, { recursive: true });
   }
 
-  async saveMemeFile(file: MemeUploadFile): Promise<SavedMemeMedia> {
+  async saveMemeFile(
+    file: MemeUploadFile,
+    thumbnailFile?: MemeUploadFile,
+  ): Promise<SavedMemeMedia> {
     let mimeType = file?.mimetype?.toLowerCase();
     const mediaType = getMemeMediaType(mimeType);
     let extension = getMemeExtension(mimeType);
 
     if (!file || !mimeType || !mediaType || !extension) {
       await this.removeUploadedFile(file);
+      await this.removeUploadedFile(thumbnailFile);
       throw new BadRequestException(
         '仅支持 JPG、PNG、GIF、WebP、MP4、WebM 或 MOV 文件',
       );
@@ -188,6 +180,7 @@ export class StorageService implements OnModuleInit {
       !(mediaType === 'IMAGE' && isImageExtension)
     ) {
       await this.removeUploadedFile(file);
+      await this.removeUploadedFile(thumbnailFile);
       throw new BadRequestException('文件扩展名与媒体类型不匹配');
     }
 
@@ -196,6 +189,7 @@ export class StorageService implements OnModuleInit {
 
     if (file.size > maxSize) {
       await this.removeUploadedFile(file);
+      await this.removeUploadedFile(thumbnailFile);
       throw new PayloadTooLargeException(
         mediaType === 'VIDEO'
           ? `视频大小不能超过 ${Math.round(MAX_MEME_VIDEO_SIZE / 1024 / 1024)}MB`
@@ -219,24 +213,47 @@ export class StorageService implements OnModuleInit {
 
       const mediaUrl = this.toMemeUrl(filePath);
 
+      if (thumbnailFile) {
+        if (
+          (mediaType !== 'IMAGE' && mediaType !== 'VIDEO') ||
+          thumbnailFile.mimetype?.toLowerCase() !== 'image/jpeg'
+        ) {
+          await this.removeUploadedFile(thumbnailFile);
+          throw new BadRequestException('封面必须是 JPEG 图片');
+        }
+
+        if (thumbnailFile.size > MAX_MEME_THUMBNAIL_SIZE) {
+          await this.removeUploadedFile(thumbnailFile);
+          throw new PayloadTooLargeException('封面大小不能超过 2MB');
+        }
+      }
+
       if (mediaType === 'VIDEO') {
-        const videoInfo = await this.processVideo(filePath);
-        thumbnailPath = videoInfo.thumbnailPath;
+        if (!thumbnailFile) {
+          throw new BadRequestException(
+            '视频必须提供浏览器生成的 JPEG 首帧封面，请重新上传',
+          );
+        }
+
+        thumbnailPath = await this.saveUploadedThumbnail(thumbnailFile);
 
         return {
           mediaUrl,
           mediaType,
           mimeType,
-          thumbnailUrl: thumbnailPath
-            ? this.toMemeUrl(thumbnailPath)
-            : null,
-          duration: videoInfo.duration,
+          thumbnailUrl: this.toMemeUrl(thumbnailPath),
+          duration: null,
         };
       }
 
       if (isAnimatedImageMimeType(mimeType)) {
-        const imageInfo = await this.processAnimatedImage(filePath);
-        thumbnailPath = imageInfo.thumbnailPath;
+        if (!thumbnailFile) {
+          throw new BadRequestException(
+            '动图必须提供浏览器生成的 JPEG 首帧封面，请重新上传',
+          );
+        }
+
+        thumbnailPath = await this.saveUploadedThumbnail(thumbnailFile);
 
         return {
           mediaUrl,
@@ -245,9 +262,11 @@ export class StorageService implements OnModuleInit {
           thumbnailUrl: thumbnailPath
             ? this.toMemeUrl(thumbnailPath)
             : null,
-          duration: imageInfo.duration,
+          duration: null,
         };
       }
+
+      await this.removeUploadedFile(thumbnailFile);
 
       return {
         mediaUrl,
@@ -262,6 +281,8 @@ export class StorageService implements OnModuleInit {
       if (thumbnailPath) {
         await this.removeFile(thumbnailPath);
       }
+
+      await this.removeUploadedFile(thumbnailFile);
 
       throw error;
     }
@@ -294,150 +315,6 @@ export class StorageService implements OnModuleInit {
 
       throw error;
     }
-  }
-
-  async readMemeMediaKeyframes(
-    mediaUrl: string,
-    duration: number | null | undefined,
-    sourceType: 'VIDEO' | 'ANIMATED_IMAGE',
-  ): Promise<MemeVideoKeyframe[]> {
-    const filePath = this.resolveMemePath(mediaUrl);
-
-    if (!filePath) {
-      throw new BadRequestException(
-        sourceType === 'ANIMATED_IMAGE'
-          ? '只能分析本地上传的动图'
-          : '只能分析本地上传的视频',
-      );
-    }
-
-    const ffmpegPath = process.env.FFMPEG_PATH ?? 'ffmpeg';
-    const ffprobePath = process.env.FFPROBE_PATH ?? 'ffprobe';
-    const keyframeDirectory = join(
-      this.memeUploadDirectory,
-      'keyframes',
-      randomUUID(),
-    );
-
-    try {
-      await mkdir(keyframeDirectory, { recursive: true });
-
-      const parsedDuration = Number(duration);
-      let videoDuration =
-        Number.isFinite(parsedDuration) && parsedDuration > 0
-          ? parsedDuration
-          : null;
-
-      if (videoDuration === null) {
-        try {
-          videoDuration = await this.readVideoDuration(filePath, ffprobePath);
-        } catch (error) {
-          if (
-            sourceType === 'ANIMATED_IMAGE' &&
-            error instanceof BadRequestException
-          ) {
-            return await this.readAnimatedImageFallback(mediaUrl);
-          }
-
-          throw error;
-        }
-      }
-
-      if (
-        videoDuration === null ||
-        !Number.isFinite(videoDuration) ||
-        videoDuration <= 0
-      ) {
-        throw new BadRequestException('无法读取视频时长，无法提取关键帧');
-      }
-
-      const frameCount =
-        sourceType === 'ANIMATED_IMAGE'
-          ? videoDuration <= SHORT_ANIMATED_IMAGE_MAX_DURATION
-            ? 1
-            : 8
-          : Math.max(1, Math.min(8, Math.ceil(videoDuration)));
-      const keyframes: MemeVideoKeyframe[] = [];
-
-      for (let index = 0; index < frameCount; index += 1) {
-        const timestamp =
-          sourceType === 'ANIMATED_IMAGE' && frameCount === 1
-            ? 0
-            : Math.min(
-                videoDuration * ((index + 0.5) / frameCount),
-                Math.max(0, videoDuration - 0.05),
-              );
-        const framePath = join(
-          keyframeDirectory,
-          `frame-${String(index + 1).padStart(2, '0')}.jpg`,
-        );
-
-        await execFileAsync(
-          ffmpegPath,
-          [
-            '-y',
-            '-ss',
-            timestamp.toFixed(3),
-            '-i',
-            filePath,
-            '-frames:v',
-            '1',
-            '-vf',
-            'scale=1024:-2:force_original_aspect_ratio=decrease',
-            '-q:v',
-            '4',
-            framePath,
-          ],
-          { windowsHide: true },
-        );
-
-        keyframes.push({
-          timestamp,
-          buffer: await readFile(framePath),
-          mimeType: 'image/jpeg',
-        });
-      }
-
-      return keyframes;
-    } catch (error) {
-      if (this.isMissingMediaTool(error)) {
-        if (sourceType === 'ANIMATED_IMAGE') {
-          return await this.readAnimatedImageFallback(mediaUrl);
-        }
-
-        throw new ServiceUnavailableException(
-          '视频 AI 分析需要安装 FFmpeg 和 ffprobe，或配置 FFMPEG_PATH 与 FFPROBE_PATH',
-        );
-      }
-
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException ||
-        error instanceof ServiceUnavailableException
-      ) {
-        throw error;
-      }
-
-      throw new BadRequestException('视频关键帧提取失败，请检查视频文件是否有效');
-    } finally {
-      await rm(keyframeDirectory, { recursive: true, force: true }).catch(
-        () => undefined,
-      );
-    }
-  }
-
-  private async readAnimatedImageFallback(
-    mediaUrl: string,
-  ): Promise<MemeVideoKeyframe[]> {
-    const image = await this.readMemeImage(mediaUrl);
-
-    return [
-      {
-        timestamp: 0,
-        buffer: image.buffer,
-        mimeType: image.mimeType,
-      },
-    ];
   }
 
   async removeMemeMedia(
@@ -579,140 +456,29 @@ export class StorageService implements OnModuleInit {
     return normalizedPath;
   }
 
-  private async processVideo(filePath: string): Promise<{
-    duration: number | null;
-    thumbnailPath: string | null;
-  }> {
-    const ffprobePath = process.env.FFPROBE_PATH ?? 'ffprobe';
-    const ffmpegPath = process.env.FFMPEG_PATH ?? 'ffmpeg';
+  private async saveUploadedThumbnail(file: MemeUploadFile): Promise<string> {
     const thumbnailDirectory = join(this.memeUploadDirectory, 'thumbnails');
-    const thumbnailPath = join(
-      thumbnailDirectory,
-      `${basename(filePath, extname(filePath))}.jpg`,
-    );
+    const thumbnailPath = join(thumbnailDirectory, `${randomUUID()}.jpg`);
 
-    try {
-      const duration = await this.readVideoDuration(filePath, ffprobePath);
+    await mkdir(thumbnailDirectory, { recursive: true });
 
-      await mkdir(thumbnailDirectory, { recursive: true });
-      await execFileAsync(
-        ffmpegPath,
-        [
-          '-y',
-          '-i',
-          filePath,
-          '-frames:v',
-          '1',
-          '-vf',
-          'scale=640:-2:force_original_aspect_ratio=decrease',
-          '-q:v',
-          '3',
-          thumbnailPath,
-        ],
-        { windowsHide: true },
-      );
+    if (file.path) {
+      const filePath = resolve(file.path);
 
-      return { duration, thumbnailPath };
-    } catch (error) {
-      if (this.isMissingMediaTool(error)) {
-        this.logger.warn(
-          'FFmpeg/ffprobe 未安装，视频仍会保存，但不会生成封面或时长信息。',
-        );
-        return { duration: null, thumbnailPath: null };
+      if (!this.isInsideUploadDirectory(filePath)) {
+        throw new BadRequestException('上传封面路径无效');
       }
 
-      await this.removeFile(thumbnailPath);
-      throw new BadRequestException('视频文件无法读取或生成封面');
-    }
-  }
-
-  private async processAnimatedImage(filePath: string): Promise<{
-    duration: number | null;
-    thumbnailPath: string | null;
-  }> {
-    const ffprobePath = process.env.FFPROBE_PATH ?? 'ffprobe';
-    const ffmpegPath = process.env.FFMPEG_PATH ?? 'ffmpeg';
-    const thumbnailDirectory = join(this.memeUploadDirectory, 'thumbnails');
-    const thumbnailPath = join(
-      thumbnailDirectory,
-      `${basename(filePath, extname(filePath))}.jpg`,
-    );
-    let duration: number | null = null;
-
-    try {
-      try {
-        duration = await this.readVideoDuration(filePath, ffprobePath);
-      } catch {
-        // 静态 GIF/WebP 可能没有可用的 duration，仍然继续生成第一帧封面。
-      }
-
-      await mkdir(thumbnailDirectory, { recursive: true });
-      await execFileAsync(
-        ffmpegPath,
-        [
-          '-y',
-          '-ss',
-          '0',
-          '-i',
-          filePath,
-          '-frames:v',
-          '1',
-          '-vf',
-          'scale=640:-2:force_original_aspect_ratio=decrease',
-          '-q:v',
-          '3',
-          thumbnailPath,
-        ],
-        { windowsHide: true },
-      );
-
-      return { duration, thumbnailPath };
-    } catch (error) {
-      if (this.isMissingMediaTool(error)) {
-        this.logger.warn(
-          'FFmpeg 未安装，动图仍会保存，但不会生成 JPEG 封面。',
-        );
-        return { duration, thumbnailPath: null };
-      }
-
-      await this.removeFile(thumbnailPath);
-      throw new BadRequestException('动图无法读取或生成 JPEG 封面');
-    }
-  }
-
-  private async readVideoDuration(
-    filePath: string,
-    ffprobePath: string,
-  ): Promise<number> {
-    const metadataResult = await execFileAsync(
-      ffprobePath,
-      [
-        '-v',
-        'error',
-        '-show_entries',
-        'format=duration',
-        '-of',
-        'default=noprint_wrappers=1:nokey=1',
-        filePath,
-      ],
-      { windowsHide: true },
-    );
-    const duration = Number(metadataResult.stdout.toString().trim());
-
-    if (!Number.isFinite(duration) || duration <= 0) {
-      throw new BadRequestException('无法读取视频时长，无法提取关键帧');
+      await rename(filePath, thumbnailPath);
+      return thumbnailPath;
     }
 
-    return duration;
-  }
+    if (!file.buffer) {
+      throw new BadRequestException('上传封面内容为空');
+    }
 
-  private isMissingMediaTool(error: unknown) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error.code === 'ENOENT' || error.code === 'UNKNOWN')
-    );
+    await writeFile(thumbnailPath, file.buffer, { flag: 'wx' });
+    return thumbnailPath;
   }
 
   private async removeFileByUrl(fileUrl: string | null | undefined) {

@@ -22,6 +22,7 @@ export type UploadMemeInput = {
   title?: string;
   description?: string;
   tags?: string[];
+  thumbnail?: File;
 };
 
 export type AnalyzeMemeInput = {
@@ -109,6 +110,10 @@ export const memesApi = {
       for (const tag of input.tags) {
         formData.append('tags', tag);
       }
+    }
+
+    if (input.thumbnail) {
+      formData.append('thumbnail', input.thumbnail, input.thumbnail.name);
     }
 
     return new Promise((resolve, reject) => {

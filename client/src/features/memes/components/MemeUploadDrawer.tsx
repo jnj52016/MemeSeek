@@ -22,16 +22,18 @@ const VIDEO_MIME_TYPES = new Set([
   'video/webm',
   'video/quicktime',
 ])
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
 
 function getUploadMediaType(file: File) {
-  if (file.type.startsWith('image/')) {
+  const mimeType = file.type.toLowerCase()
+  const extension = file.name.split('.').pop()?.toLowerCase()
+
+  if (mimeType.startsWith('image/') || IMAGE_EXTENSIONS.has(extension ?? '')) {
     return 'IMAGE' as const
   }
 
-  const extension = file.name.split('.').pop()?.toLowerCase()
-
   if (
-    VIDEO_MIME_TYPES.has(file.type.toLowerCase()) ||
+    VIDEO_MIME_TYPES.has(mimeType) ||
     ['mp4', 'webm', 'mov'].includes(extension ?? '')
   ) {
     return 'VIDEO' as const
@@ -42,6 +44,98 @@ function getUploadMediaType(file: File) {
 
 function getTitleFromFileName(fileName: string) {
   return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传素材'
+}
+
+async function createJpegThumbnail(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  fileName: string,
+): Promise<File> {
+  if (!width || !height) {
+    throw new Error('媒体尺寸无效')
+  }
+
+  const maxDimension = 640
+  const scale = Math.min(1, maxDimension / Math.max(width, height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(width * scale))
+  canvas.height = Math.max(1, Math.round(height * scale))
+
+  const context = canvas.getContext('2d')
+
+  if (!context) {
+    throw new Error('当前浏览器不支持生成 JPEG 封面')
+  }
+
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(source, 0, 0, canvas.width, canvas.height)
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', 0.88),
+  )
+
+  if (!blob) {
+    throw new Error('无法生成 JPEG 封面')
+  }
+
+  const baseName = fileName.replace(/\.[^/.]+$/, '').trim() || 'meme'
+  return new File([blob], `${baseName}-thumbnail.jpg`, {
+    type: 'image/jpeg',
+    lastModified: Date.now(),
+  })
+}
+
+async function createImageThumbnail(file: File): Promise<File> {
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new Image()
+    image.decoding = 'async'
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('无法读取图片内容'))
+      image.src = objectUrl
+    })
+
+    return createJpegThumbnail(
+      image,
+      image.naturalWidth,
+      image.naturalHeight,
+      file.name,
+    )
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
+async function createVideoThumbnail(file: File): Promise<File> {
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const video = document.createElement('video')
+    video.preload = 'auto'
+    video.muted = true
+    video.playsInline = true
+
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve()
+      video.onerror = () => reject(new Error('无法读取视频内容'))
+      video.src = objectUrl
+      video.load()
+    })
+
+    return createJpegThumbnail(
+      video,
+      video.videoWidth,
+      video.videoHeight,
+      file.name,
+    )
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 
 function getPastedFileName(mimeType: string) {
@@ -171,9 +265,17 @@ function MemeUploadDrawer({
     setAnalysisError(null)
 
     try {
+      const selectedMediaType = getUploadMediaType(selectedFile)
+      const thumbnail =
+        selectedMediaType === 'VIDEO'
+          ? await createVideoThumbnail(selectedFile)
+          : selectedMediaType === 'IMAGE'
+            ? await createImageThumbnail(selectedFile)
+            : undefined
+
       let meme = await memesApi.upload(
         selectedFile,
-        { title: getTitleFromFileName(selectedFile.name) },
+        { title: getTitleFromFileName(selectedFile.name), thumbnail },
         (nextProgress) => {
           if (!cancelledRef.current) {
             setProgress(nextProgress)
@@ -187,7 +289,7 @@ function MemeUploadDrawer({
 
       const aiSettings = loadAiSettings()
 
-      // 图片和视频都使用分析 AI；视频由后端先抽取关键帧，再发送给视觉模型。
+      // 图片和视频都使用分析 AI；视频和动图只发送浏览器生成的首帧封面。
       if (aiSettings.analysis.apiKey.trim()) {
         meme = await memesApi.analyze(meme.id, {
           baseUrl: aiSettings.analysis.baseUrl,

@@ -20,12 +20,18 @@ export class MemesService {
     private readonly storage: StorageService,
   ) {}
 
-  async create(dto: CreateMemeDto, file?: MemeUploadFile) {
+  async create(
+    dto: CreateMemeDto,
+    file?: MemeUploadFile,
+    thumbnailFile?: MemeUploadFile,
+  ) {
     if (!dto.imageUrl && !file) {
       throw new BadRequestException('请提供 imageUrl 或上传图片/视频文件');
     }
 
-    const savedMedia = file ? await this.storage.saveMemeFile(file) : null;
+    const savedMedia = file
+      ? await this.storage.saveMemeFile(file, thumbnailFile)
+      : null;
     const imageUrl = savedMedia?.mediaUrl ?? dto.imageUrl!;
 
     try {

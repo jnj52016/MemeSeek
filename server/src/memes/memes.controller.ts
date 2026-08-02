@@ -9,7 +9,7 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -22,7 +22,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MemeStatus } from '@prisma/client';
 import { CreateMemeDto } from './dto/create-meme.dto';
 import { FindMemesDto } from './dto/find-memes.dto';
@@ -34,6 +34,11 @@ import {
   MAX_MEME_UPLOAD_SIZE,
 } from '../storage/storage.service';
 import type { MemeUploadFile } from '../storage/storage.service';
+
+type MemeUploadFields = {
+  file?: MemeUploadFile[];
+  thumbnail?: MemeUploadFile[];
+};
 
 @Controller('memes')
 @ApiTags('memes')
@@ -53,6 +58,11 @@ export class MemesController {
           format: 'binary',
           description: '支持 JPG、PNG、GIF、WebP、MP4、WebM 和 MOV',
         },
+        thumbnail: {
+          type: 'string',
+          format: 'binary',
+          description: '视频或动图的客户端 JPEG 首帧封面，上传文件时必填',
+        },
         imageUrl: {
           type: 'string',
           example: '/uploads/memes/example.png',
@@ -66,16 +76,26 @@ export class MemesController {
   })
   @ApiResponse({ status: 201, type: MemeResponseDto })
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: createMemeUploadStorage(),
-      limits: { fileSize: MAX_MEME_UPLOAD_SIZE },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 1 },
+      ],
+      {
+        storage: createMemeUploadStorage(),
+        limits: { fileSize: MAX_MEME_UPLOAD_SIZE },
+      },
+    ),
   )
   create(
     @Body() dto: CreateMemeDto,
-    @UploadedFile() file?: MemeUploadFile,
+    @UploadedFiles() files?: MemeUploadFields,
   ) {
-    return this.memesService.create(dto, file);
+    return this.memesService.create(
+      dto,
+      files?.file?.[0],
+      files?.thumbnail?.[0],
+    );
   }
 
   @Get()
