@@ -6,7 +6,7 @@
 
 ## 一、当前进度
 
-项目已经完成前端 Mock MVP、后端 CRUD、图片上传闭环、AI 后端服务接入以及分析 AI / 内容 AI 配置拆分；当前正在完善基于关键帧的视频 AI 分析，音频转写不纳入本阶段。
+项目已经完成前端 Mock MVP、后端 CRUD、图片上传闭环、AI 后端服务接入以及分析 AI / 内容 AI 配置拆分；当前正在完善基于关键帧的视频 AI 分析。
 
 ```text
 前端 Mock 页面已完成
@@ -34,7 +34,7 @@ Prisma Module 和 Prisma Service 已完成
 下一步：配置 FFmpeg 后手动验证视频关键帧分析和前端自动分析流程
 ```
 
-说明：本轮按要求暂不运行自动化测试；视频自动化验收仍待后续阶段完成。本阶段不实现音频转写。
+说明：本轮按要求暂不运行自动化测试；视频自动化验收仍待后续阶段完成。
 
 ## 二、已完成内容
 
@@ -292,13 +292,9 @@ FFmpeg 生成视频封面和关键帧
 ### 数据模型
 
 - [x] 为 `Meme` 增加 `mediaType`，区分 `IMAGE` 和 `VIDEO`。
-- [x] 增加 `mimeType`、`thumbnailUrl`、`duration` 和 `transcript` 字段。
+- [x] 增加 `mimeType`、`thumbnailUrl` 和 `duration` 字段。
 - [x] 保留现有 `imageUrl` 字段作为媒体文件地址，避免破坏已有图片数据。
 - [x] 为视频字段创建 Prisma 迁移，并更新 OpenAPI、后端 DTO 和前端类型。
-- [x] 保留已有 `transcript` 字段和搜索兼容性；本阶段不生成转写文本。
-
-说明：现有 `transcript` 字段暂时保留用于兼容已经生成的数据库/API 结构，但本阶段不实现音频提取、语音转写，也不依赖该字段完成视频分析。
-
 ### 后端上传与存储
 
 - [x] 修改 `POST /memes`，允许上传常见视频格式，例如 MP4、WebM 和 MOV。
