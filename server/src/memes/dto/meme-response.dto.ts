@@ -14,7 +14,7 @@ export class MemeResponseDto {
   @ApiProperty({ type: String, nullable: true, example: 'image/png' })
   mimeType!: string | null;
 
-  @ApiProperty({ type: String, nullable: true, example: '/uploads/memes/thumbnails/example.jpg' })
+  @ApiProperty({ type: String, nullable: true, example: '/uploads/memes/thumbnails/example.jpg', description: '视频或动图封面地址' })
   thumbnailUrl!: string | null;
 
   @ApiProperty({ type: Number, nullable: true, example: 12.5 })

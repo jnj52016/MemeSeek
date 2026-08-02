@@ -16,6 +16,8 @@ const statusConfig = {
 } as const
 
 function MemeCard({ meme, onClick }: MemeCardProps) {
+  const imageSource = meme.thumbnailUrl || meme.imageUrl
+
   return (
     <button
       type="button"
@@ -38,7 +40,7 @@ function MemeCard({ meme, onClick }: MemeCardProps) {
         />
       ) : (
         <img
-          src={resolveMemeMediaUrl(meme.imageUrl)}
+          src={resolveMemeMediaUrl(imageSource)}
           alt={meme.title}
           loading="lazy"
           className="h-44 w-full object-cover"
@@ -53,7 +55,11 @@ function MemeCard({ meme, onClick }: MemeCardProps) {
           </Tag>
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          {meme.mediaType === 'VIDEO' ? '视频素材 · 点击查看详情' : '点击查看详情'}
+          {meme.mediaType === 'VIDEO'
+            ? '视频素材 · 点击查看详情'
+            : meme.thumbnailUrl
+              ? '动图素材 · 点击查看详情'
+              : '点击查看详情'}
         </p>
       </div>
     </button>

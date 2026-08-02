@@ -4,7 +4,7 @@
  * @property imageUrl 梗图图片或视频地址
  * @property mediaType 媒体类型
  * @property mimeType 媒体 MIME 类型
- * @property thumbnailUrl 视频封面地址
+ * @property thumbnailUrl 视频或动图封面地址
  * @property duration 视频时长（秒）
  * @property title 梗图标题
  * @property description 梗图描述

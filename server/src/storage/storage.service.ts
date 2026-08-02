@@ -10,7 +10,16 @@ import {
 import { diskStorage } from 'multer';
 import { exec, execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  open,
+  readFile,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 
@@ -153,9 +162,9 @@ export class StorageService implements OnModuleInit {
   }
 
   async saveMemeFile(file: MemeUploadFile): Promise<SavedMemeMedia> {
-    const mimeType = file?.mimetype?.toLowerCase();
+    let mimeType = file?.mimetype?.toLowerCase();
     const mediaType = getMemeMediaType(mimeType);
-    const extension = getMemeExtension(mimeType);
+    let extension = getMemeExtension(mimeType);
 
     if (!file || !mimeType || !mediaType || !extension) {
       await this.removeUploadedFile(file);
@@ -169,9 +178,14 @@ export class StorageService implements OnModuleInit {
       .pop()
       ?.toLowerCase();
 
+    const isImageExtension = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
+      originalExtension ?? '',
+    );
+
     if (
       originalExtension &&
-      !ALLOWED_EXTENSIONS[mimeType]?.includes(originalExtension)
+      !ALLOWED_EXTENSIONS[mimeType]?.includes(originalExtension) &&
+      !(mediaType === 'IMAGE' && isImageExtension)
     ) {
       await this.removeUploadedFile(file);
       throw new BadRequestException('文件扩展名与媒体类型不匹配');
@@ -191,11 +205,20 @@ export class StorageService implements OnModuleInit {
 
     await mkdir(this.memeUploadDirectory, { recursive: true });
 
-    const filePath = await this.resolveUploadedFilePath(file, extension);
-    const mediaUrl = this.toMemeUrl(filePath);
+    let filePath = await this.resolveUploadedFilePath(file, extension);
     let thumbnailPath: string | null = null;
 
     try {
+      const detectedImageMimeType = await this.detectImageMimeType(filePath);
+
+      if (mediaType === 'IMAGE' && detectedImageMimeType) {
+        mimeType = detectedImageMimeType;
+        extension = getMemeExtension(mimeType) ?? extension;
+        filePath = await this.normalizeMediaFileExtension(filePath, extension);
+      }
+
+      const mediaUrl = this.toMemeUrl(filePath);
+
       if (mediaType === 'VIDEO') {
         const videoInfo = await this.processVideo(filePath);
         thumbnailPath = videoInfo.thumbnailPath;
@@ -208,6 +231,21 @@ export class StorageService implements OnModuleInit {
             ? this.toMemeUrl(thumbnailPath)
             : null,
           duration: videoInfo.duration,
+        };
+      }
+
+      if (isAnimatedImageMimeType(mimeType)) {
+        const imageInfo = await this.processAnimatedImage(filePath);
+        thumbnailPath = imageInfo.thumbnailPath;
+
+        return {
+          mediaUrl,
+          mediaType,
+          mimeType,
+          thumbnailUrl: thumbnailPath
+            ? this.toMemeUrl(thumbnailPath)
+            : null,
+          duration: imageInfo.duration,
         };
       }
 
@@ -484,6 +522,63 @@ export class StorageService implements OnModuleInit {
     return filePath;
   }
 
+  private async detectImageMimeType(filePath: string): Promise<string | null> {
+    const fileHandle = await open(filePath, 'r');
+
+    try {
+      const header = Buffer.alloc(12);
+      await fileHandle.read(header, 0, header.length, 0);
+
+      if (header.subarray(0, 6).toString('ascii').match(/^GIF8[79]a$/)) {
+        return 'image/gif';
+      }
+
+      if (
+        header.subarray(0, 4).toString('ascii') === 'RIFF' &&
+        header.subarray(8, 12).toString('ascii') === 'WEBP'
+      ) {
+        return 'image/webp';
+      }
+
+      if (header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
+        return 'image/jpeg';
+      }
+
+      if (
+        header[0] === 0x89 &&
+        header[1] === 0x50 &&
+        header[2] === 0x4e &&
+        header[3] === 0x47 &&
+        header[4] === 0x0d &&
+        header[5] === 0x0a &&
+        header[6] === 0x1a &&
+        header[7] === 0x0a
+      ) {
+        return 'image/png';
+      }
+
+      return null;
+    } finally {
+      await fileHandle.close();
+    }
+  }
+
+  private async normalizeMediaFileExtension(
+    filePath: string,
+    extension: string,
+  ): Promise<string> {
+    if (extname(filePath).slice(1).toLowerCase() === extension) {
+      return filePath;
+    }
+
+    const normalizedPath = join(
+      dirname(filePath),
+      `${basename(filePath, extname(filePath))}.${extension}`,
+    );
+    await rename(filePath, normalizedPath);
+    return normalizedPath;
+  }
+
   private async processVideo(filePath: string): Promise<{
     duration: number | null;
     thumbnailPath: string | null;
@@ -528,6 +623,60 @@ export class StorageService implements OnModuleInit {
 
       await this.removeFile(thumbnailPath);
       throw new BadRequestException('视频文件无法读取或生成封面');
+    }
+  }
+
+  private async processAnimatedImage(filePath: string): Promise<{
+    duration: number | null;
+    thumbnailPath: string | null;
+  }> {
+    const ffprobePath = process.env.FFPROBE_PATH ?? 'ffprobe';
+    const ffmpegPath = process.env.FFMPEG_PATH ?? 'ffmpeg';
+    const thumbnailDirectory = join(this.memeUploadDirectory, 'thumbnails');
+    const thumbnailPath = join(
+      thumbnailDirectory,
+      `${basename(filePath, extname(filePath))}.jpg`,
+    );
+    let duration: number | null = null;
+
+    try {
+      try {
+        duration = await this.readVideoDuration(filePath, ffprobePath);
+      } catch {
+        // 静态 GIF/WebP 可能没有可用的 duration，仍然继续生成第一帧封面。
+      }
+
+      await mkdir(thumbnailDirectory, { recursive: true });
+      await execFileAsync(
+        ffmpegPath,
+        [
+          '-y',
+          '-ss',
+          '0',
+          '-i',
+          filePath,
+          '-frames:v',
+          '1',
+          '-vf',
+          'scale=640:-2:force_original_aspect_ratio=decrease',
+          '-q:v',
+          '3',
+          thumbnailPath,
+        ],
+        { windowsHide: true },
+      );
+
+      return { duration, thumbnailPath };
+    } catch (error) {
+      if (this.isMissingMediaTool(error)) {
+        this.logger.warn(
+          'FFmpeg 未安装，动图仍会保存，但不会生成 JPEG 封面。',
+        );
+        return { duration, thumbnailPath: null };
+      }
+
+      await this.removeFile(thumbnailPath);
+      throw new BadRequestException('动图无法读取或生成 JPEG 封面');
     }
   }
 

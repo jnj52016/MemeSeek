@@ -302,7 +302,11 @@ function MemeDetailModal({
                 <div>
                   <p className="mb-2 text-sm text-slate-500">素材信息</p>
                   <p className="text-sm text-slate-700">
-                    {meme.mediaType === 'VIDEO' ? '视频' : '图片'}
+                    {meme.mediaType === 'VIDEO'
+                      ? '视频'
+                      : meme.thumbnailUrl
+                        ? '动图'
+                        : '图片'}
                     {formatDuration(meme.duration)
                       ? ` · ${formatDuration(meme.duration)}`
                       : ''}
