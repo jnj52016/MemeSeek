@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MemeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -12,20 +7,21 @@ import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
 // 默认使用 OpenAI 视觉模型，也可以通过 AI_MODEL 切换模型。
 export const DEFAULT_AI_MODEL = 'gpt-4o';
 
-const DEFAULT_ANALYSIS_PROMPT = `你是一个梗图整理助手。请分析用户提供的图片，并且只返回 JSON，不要返回 Markdown 代码块或额外解释。
+const DEFAULT_ANALYSIS_PROMPT = `你是一个梗图和短视频素材整理助手。请分析用户提供的一张图片，或按时间顺序排列的一组视频关键帧，并且只返回 JSON，不要返回 Markdown 代码块或额外解释。
 
 JSON 必须严格包含以下字段：
 {
   "title": "简短、准确的中文标题",
-  "description": "用一句或两句中文描述画面、情绪和适合使用的语境",
+  "description": "用一句或两句中文描述画面、情绪、变化和适合使用的语境",
   "tags": ["中文标签"],
-  "ocrText": "图片中可识别的文字；没有则返回空字符串"
+  "ocrText": "画面中可识别的文字；没有则返回空字符串"
 }
 
 要求：
 - title、description、ocrText 必须是字符串。
 - tags 必须是字符串数组，最多返回 8 个标签，不要带 #。
-- 不要编造图片中不存在的文字。
+- 如果输入的是视频关键帧，请结合关键帧的时间顺序和画面变化进行描述。
+- 不要编造画面中不存在的文字或内容。
 - 输出内容必须是合法 JSON。`;
 
 type MemeAnalysis = {
@@ -33,6 +29,11 @@ type MemeAnalysis = {
   description: string;
   tags: string[];
   ocrText: string;
+};
+
+type AnalysisImage = {
+  url: string;
+  timestamp?: number;
 };
 
 type ChatCompletionResponse = {
@@ -66,18 +67,14 @@ export class AiService {
       throw new NotFoundException(`Meme with id "${id}" not found`);
     }
 
-    if (meme.mediaType === 'VIDEO') {
-      throw new BadRequestException('视频 AI 分析尚未实现');
-    }
-
     await this.prisma.meme.update({
       where: { id },
       data: { status: MemeStatus.PROCESSING, errorMessage: null },
     });
 
     try {
-      const imageSource = await this.resolveImageSource(meme.imageUrl);
-      const analysis = await this.requestAnalysis(imageSource, meme, options);
+      const imageSources = await this.resolveAnalysisImages(meme);
+      const analysis = await this.requestAnalysis(imageSources, meme, options);
 
       return this.prisma.meme.update({
         where: { id },
@@ -104,6 +101,26 @@ export class AiService {
     }
   }
 
+  private async resolveAnalysisImages(meme: {
+    imageUrl: string;
+    mediaType?: string | null;
+    duration?: number | null;
+  }): Promise<AnalysisImage[]> {
+    if (meme.mediaType === 'VIDEO') {
+      const keyframes = await this.storage.readMemeVideoKeyframes(
+        meme.imageUrl,
+        meme.duration,
+      );
+
+      return keyframes.map((keyframe) => ({
+        timestamp: keyframe.timestamp,
+        url: `data:${keyframe.mimeType};base64,${keyframe.buffer.toString('base64')}`,
+      }));
+    }
+
+    return [{ url: await this.resolveImageSource(meme.imageUrl) }];
+  }
+
   private async resolveImageSource(imageUrl: string): Promise<string> {
     if (/^https?:\/\//i.test(imageUrl)) {
       return imageUrl;
@@ -114,8 +131,12 @@ export class AiService {
   }
 
   private async requestAnalysis(
-    imageSource: string,
-    meme: { title: string; description: string },
+    imageSources: AnalysisImage[],
+    meme: {
+      title: string;
+      description: string;
+      mediaType?: string | null;
+    },
     options: AnalyzeMemeOptions,
   ): Promise<MemeAnalysis> {
     const configuredBaseUrl =
@@ -132,7 +153,18 @@ export class AiService {
       options.model?.trim() || process.env.AI_MODEL || DEFAULT_AI_MODEL;
     const recommendedTags =
       options.recommendedTags?.filter(Boolean).join('、') || '无';
-    const userPrompt = `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
+    const timeline = imageSources
+      .map((image, index) =>
+        typeof image.timestamp === 'number'
+          ? `第${index + 1}帧约${image.timestamp.toFixed(1)}秒`
+          : null,
+      )
+      .filter((item): item is string => item !== null)
+      .join('、');
+    const userPrompt =
+      meme.mediaType === 'VIDEO'
+        ? `请分析这段视频的关键帧。关键帧按照时间顺序排列${timeline ? `，时间点为：${timeline}` : ''}。请概括画面主体、动作变化、情绪和适合使用的语境。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`
+        : `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -151,7 +183,10 @@ export class AiService {
             role: 'user',
             content: [
               { type: 'text', text: userPrompt },
-              { type: 'image_url', image_url: { url: imageSource } },
+              ...imageSources.map((image) => ({
+                type: 'image_url' as const,
+                image_url: { url: image.url },
+              })),
             ],
           },
         ],

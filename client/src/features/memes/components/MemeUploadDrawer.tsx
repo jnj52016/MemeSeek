@@ -187,9 +187,8 @@ function MemeUploadDrawer({
 
       const aiSettings = loadAiSettings()
 
-      // 只有明确是视频时才跳过当前的图片 AI 分析；兼容迁移前后端暂时未返回
-      // mediaType 的旧图片记录，避免图片上传被误判为无需分析。
-      if (meme.mediaType !== 'VIDEO' && aiSettings.analysis.apiKey.trim()) {
+      // 图片和视频都使用分析 AI；视频由后端先抽取关键帧，再发送给视觉模型。
+      if (aiSettings.analysis.apiKey.trim()) {
         meme = await memesApi.analyze(meme.id, {
           baseUrl: aiSettings.analysis.baseUrl,
           apiKey: aiSettings.analysis.apiKey.trim(),
@@ -205,10 +204,13 @@ function MemeUploadDrawer({
       if (meme.status === 'FAILED') {
         setAnalysisError(meme.errorMessage ?? 'AI 分析失败，请稍后重试')
         message.warning('梗图已上传，但 AI 分析失败')
-      } else if (meme.mediaType === 'VIDEO') {
-        message.success('视频已上传并加入列表，视频 AI 分析暂未启用')
+      } else if (
+        meme.mediaType === 'VIDEO' &&
+        aiSettings.analysis.apiKey.trim()
+      ) {
+        message.success('视频已上传并完成 AI 分析')
       } else {
-        message.success('图片已上传并加入列表')
+        message.success('素材已上传并加入列表')
       }
     } catch (error) {
       if (cancelledRef.current) {

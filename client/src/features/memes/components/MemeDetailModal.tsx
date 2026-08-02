@@ -342,9 +342,7 @@ function MemeDetailModal({
             <div>
               <p className="mb-2 text-sm text-slate-500">AI 分析状态</p>
               <p className="text-sm text-slate-700">
-                {meme.mediaType === 'VIDEO'
-                  ? '视频已上传，视频 AI 分析暂未启用'
-                  : statusText[meme.status]}
+                {statusText[meme.status]}
               </p>
               {meme.status === 'FAILED' && (
                 <div className="mt-3 space-y-3">

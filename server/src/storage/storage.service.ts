@@ -10,7 +10,7 @@ import {
 import { diskStorage } from 'multer';
 import { exec, execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { basename, dirname, extname, join, resolve, sep } from 'node:path';
 
@@ -79,6 +79,12 @@ export type SavedMemeMedia = {
   mimeType: string;
   thumbnailUrl: string | null;
   duration: number | null;
+};
+
+export type MemeVideoKeyframe = {
+  timestamp: number;
+  buffer: Buffer;
+  mimeType: 'image/jpeg';
 };
 
 const IMAGE_MIME_TYPES: Record<string, string> = Object.fromEntries(
@@ -242,6 +248,101 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  async readMemeVideoKeyframes(
+    mediaUrl: string,
+    duration: number | null | undefined,
+  ): Promise<MemeVideoKeyframe[]> {
+    const filePath = this.resolveMemePath(mediaUrl);
+
+    if (!filePath) {
+      throw new BadRequestException('只能分析本地上传的视频');
+    }
+
+    const ffmpegPath = process.env.FFMPEG_PATH ?? 'ffmpeg';
+    const ffprobePath = process.env.FFPROBE_PATH ?? 'ffprobe';
+    const keyframeDirectory = join(
+      this.memeUploadDirectory,
+      'keyframes',
+      randomUUID(),
+    );
+
+    try {
+      await mkdir(keyframeDirectory, { recursive: true });
+
+      const parsedDuration = Number(duration);
+      const videoDuration =
+        Number.isFinite(parsedDuration) && parsedDuration > 0
+          ? parsedDuration
+          : await this.readVideoDuration(filePath, ffprobePath);
+
+      if (!Number.isFinite(videoDuration) || videoDuration <= 0) {
+        throw new BadRequestException('无法读取视频时长，无法提取关键帧');
+      }
+
+      // 对普通视频抽取 8 帧；极短视频减少帧数，避免反复抽取同一画面。
+      const frameCount = Math.max(1, Math.min(8, Math.ceil(videoDuration)));
+      const keyframes: MemeVideoKeyframe[] = [];
+
+      for (let index = 0; index < frameCount; index += 1) {
+        const timestamp = Math.min(
+          videoDuration * ((index + 0.5) / frameCount),
+          Math.max(0, videoDuration - 0.05),
+        );
+        const framePath = join(
+          keyframeDirectory,
+          `frame-${String(index + 1).padStart(2, '0')}.jpg`,
+        );
+
+        await execFileAsync(
+          ffmpegPath,
+          [
+            '-y',
+            '-ss',
+            timestamp.toFixed(3),
+            '-i',
+            filePath,
+            '-frames:v',
+            '1',
+            '-vf',
+            'scale=1024:-2:force_original_aspect_ratio=decrease',
+            '-q:v',
+            '4',
+            framePath,
+          ],
+          { windowsHide: true },
+        );
+
+        keyframes.push({
+          timestamp,
+          buffer: await readFile(framePath),
+          mimeType: 'image/jpeg',
+        });
+      }
+
+      return keyframes;
+    } catch (error) {
+      if (this.isMissingMediaTool(error)) {
+        throw new ServiceUnavailableException(
+          '视频 AI 分析需要安装 FFmpeg 和 ffprobe，或配置 FFMPEG_PATH 与 FFPROBE_PATH',
+        );
+      }
+
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof ServiceUnavailableException
+      ) {
+        throw error;
+      }
+
+      throw new BadRequestException('视频关键帧提取失败，请检查视频文件是否有效');
+    } finally {
+      await rm(keyframeDirectory, { recursive: true, force: true }).catch(
+        () => undefined,
+      );
+    }
+  }
+
   async removeMemeMedia(
     mediaUrl: string | null | undefined,
     thumbnailUrl?: string | null,
@@ -337,21 +438,7 @@ export class StorageService implements OnModuleInit {
     );
 
     try {
-      const metadataResult = await execFileAsync(
-        ffprobePath,
-        [
-          '-v',
-          'error',
-          '-show_entries',
-          'format=duration',
-          '-of',
-          'default=noprint_wrappers=1:nokey=1',
-          filePath,
-        ],
-        { windowsHide: true },
-      );
-      const parsedDuration = Number(metadataResult.stdout.toString().trim());
-      const duration = Number.isFinite(parsedDuration) ? parsedDuration : null;
+      const duration = await this.readVideoDuration(filePath, ffprobePath);
 
       await mkdir(thumbnailDirectory, { recursive: true });
       await execFileAsync(
@@ -383,6 +470,32 @@ export class StorageService implements OnModuleInit {
       await this.removeFile(thumbnailPath);
       throw new BadRequestException('视频文件无法读取或生成封面');
     }
+  }
+
+  private async readVideoDuration(
+    filePath: string,
+    ffprobePath: string,
+  ): Promise<number> {
+    const metadataResult = await execFileAsync(
+      ffprobePath,
+      [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        filePath,
+      ],
+      { windowsHide: true },
+    );
+    const duration = Number(metadataResult.stdout.toString().trim());
+
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new BadRequestException('无法读取视频时长，无法提取关键帧');
+    }
+
+    return duration;
   }
 
   private isMissingMediaTool(error: unknown) {

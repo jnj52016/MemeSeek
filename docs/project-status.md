@@ -2,7 +2,7 @@
 
 ## 一、当前阶段
 
-目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、AI 后端服务接入、分析 AI / 内容 AI 配置拆分和真实 OpenAI 视觉模型验证；视频上传闭环代码正在接入。
+目前已经完成前端 Mock MVP、Prisma Schema、首次数据库迁移、NestJS Prisma 数据库服务接入、Meme CRUD 接口、Swagger 文档、前端 OpenAPI Client、列表真实联调、AI 后端服务接入、分析 AI / 内容 AI 配置拆分、真实 OpenAI 视觉模型验证和基于关键帧的视频 AI 分析代码；本阶段不实现音频转写。
 
 当前阶段：
 
@@ -23,9 +23,9 @@ AI Module、AI Service、分析接口和前端重新分析流程已完成
   ↓
 真实 OpenAI 视觉模型端到端验证已完成
   ↓
-视频上传数据模型、磁盘上传、媒体校验和前端视频预览代码已接入
+视频上传数据模型、磁盘上传、媒体校验、前端视频预览、关键帧抽取和视觉 AI 分析代码已接入
   ↓
-下一步：配置 Node.js / pnpm 和 FFmpeg，执行数据库迁移并手动验证视频上传
+下一步：配置 FFmpeg 后手动验证视频关键帧分析和前端自动分析流程
 ```
 
 ## 二、已经完成的内容
@@ -113,7 +113,7 @@ const [memes, setMemes] = useState<Meme[]>(mockMemes)
 - 在 `AI_BASE_URL` 配置 OpenAI API 地址，默认使用 `https://api.openai.com/v1`。
 - 配置拆分后的前端测试、前端构建、后端测试和后端构建需要重新运行；当前运行环境缺少可用的 Node.js / pnpm，且依赖目录存在读取权限限制。
 - 将界面截图保存到 `docs/screenshots/`；README 已补充架构图和流程说明，演示脚本已整理到 `docs/demo-flow.md`。
-- 视频迁移尚未执行；视频关键帧、转写和视频 AI 分析尚未实现。
+- 视频关键帧和视频 AI 分析代码已经接入，仍待 FFmpeg 环境下的手动验收；本阶段明确不实现音频提取和语音转写。
 
 ## 五、下一步操作记录
 
@@ -168,7 +168,7 @@ Swagger UI 地址为 `/docs`，OpenAPI JSON 地址为 `/docs-json`。
 
 ### 已接入：视频上传闭环代码
 
-- `Meme` 增加 `mediaType`、`mimeType`、`thumbnailUrl`、`duration` 和 `transcript` 字段，并新增 Prisma migration。
+- `Meme` 增加 `mediaType`、`mimeType`、`thumbnailUrl`、`duration` 和 `transcript` 字段，并新增 Prisma migration；`transcript` 仅作为兼容字段，本阶段不生成转写文本。
 - `POST /memes` 改为磁盘上传，支持 JPG、PNG、GIF、WebP、MP4、WebM 和 MOV；图片限制 10MB，视频默认限制 500MB。
 - 后端会在 FFmpeg/ffprobe 可用时生成视频封面并读取时长；未安装时仍保存原视频并返回明确降级状态。
 - 前端上传抽屉、卡片和详情弹窗已经支持视频预览；视频不会自动调用当前图片 AI 分析接口。
