@@ -185,6 +185,8 @@ pnpm --filter server exec prisma migrate deploy
 pnpm dev
 ```
 
+Windows 下也可以直接双击根目录的 `start-memeseek-dev.cmd`：它会启动 PostgreSQL、打开一个开发终端执行 `pnpm dev`，并打开前端页面。
+
 访问：
 
 - 前端：http://localhost:5173
