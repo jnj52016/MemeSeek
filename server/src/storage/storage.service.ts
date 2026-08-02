@@ -39,6 +39,7 @@ export const MAX_MEME_UPLOAD_SIZE = Math.max(
   MAX_MEME_IMAGE_SIZE,
   MAX_MEME_VIDEO_SIZE,
 );
+export const SHORT_ANIMATED_IMAGE_MAX_DURATION = 3;
 
 export const IMAGE_EXTENSIONS: Record<string, string> = {
   'image/gif': 'gif',
@@ -52,6 +53,15 @@ export const VIDEO_EXTENSIONS: Record<string, string> = {
   'video/webm': 'webm',
   'video/quicktime': 'mov',
 };
+
+export const ANIMATED_IMAGE_MIME_TYPES = new Set([
+  'image/gif',
+  'image/webp',
+]);
+
+export function isAnimatedImageMimeType(mimeType: string | undefined) {
+  return ANIMATED_IMAGE_MIME_TYPES.has(mimeType?.toLowerCase() ?? '');
+}
 
 const ALLOWED_EXTENSIONS: Record<string, string[]> = {
   'image/gif': ['gif'],
@@ -84,7 +94,7 @@ export type SavedMemeMedia = {
 export type MemeVideoKeyframe = {
   timestamp: number;
   buffer: Buffer;
-  mimeType: 'image/jpeg';
+  mimeType: string;
 };
 
 const IMAGE_MIME_TYPES: Record<string, string> = Object.fromEntries(
@@ -248,14 +258,19 @@ export class StorageService implements OnModuleInit {
     }
   }
 
-  async readMemeVideoKeyframes(
+  async readMemeMediaKeyframes(
     mediaUrl: string,
     duration: number | null | undefined,
+    sourceType: 'VIDEO' | 'ANIMATED_IMAGE',
   ): Promise<MemeVideoKeyframe[]> {
     const filePath = this.resolveMemePath(mediaUrl);
 
     if (!filePath) {
-      throw new BadRequestException('只能分析本地上传的视频');
+      throw new BadRequestException(
+        sourceType === 'ANIMATED_IMAGE'
+          ? '只能分析本地上传的动图'
+          : '只能分析本地上传的视频',
+      );
     }
 
     const ffmpegPath = process.env.FFMPEG_PATH ?? 'ffmpeg';
@@ -270,24 +285,50 @@ export class StorageService implements OnModuleInit {
       await mkdir(keyframeDirectory, { recursive: true });
 
       const parsedDuration = Number(duration);
-      const videoDuration =
+      let videoDuration =
         Number.isFinite(parsedDuration) && parsedDuration > 0
           ? parsedDuration
-          : await this.readVideoDuration(filePath, ffprobePath);
+          : null;
 
-      if (!Number.isFinite(videoDuration) || videoDuration <= 0) {
+      if (videoDuration === null) {
+        try {
+          videoDuration = await this.readVideoDuration(filePath, ffprobePath);
+        } catch (error) {
+          if (
+            sourceType === 'ANIMATED_IMAGE' &&
+            error instanceof BadRequestException
+          ) {
+            return await this.readAnimatedImageFallback(mediaUrl);
+          }
+
+          throw error;
+        }
+      }
+
+      if (
+        videoDuration === null ||
+        !Number.isFinite(videoDuration) ||
+        videoDuration <= 0
+      ) {
         throw new BadRequestException('无法读取视频时长，无法提取关键帧');
       }
 
-      // 对普通视频抽取 8 帧；极短视频减少帧数，避免反复抽取同一画面。
-      const frameCount = Math.max(1, Math.min(8, Math.ceil(videoDuration)));
+      const frameCount =
+        sourceType === 'ANIMATED_IMAGE'
+          ? videoDuration <= SHORT_ANIMATED_IMAGE_MAX_DURATION
+            ? 1
+            : 8
+          : Math.max(1, Math.min(8, Math.ceil(videoDuration)));
       const keyframes: MemeVideoKeyframe[] = [];
 
       for (let index = 0; index < frameCount; index += 1) {
-        const timestamp = Math.min(
-          videoDuration * ((index + 0.5) / frameCount),
-          Math.max(0, videoDuration - 0.05),
-        );
+        const timestamp =
+          sourceType === 'ANIMATED_IMAGE' && frameCount === 1
+            ? 0
+            : Math.min(
+                videoDuration * ((index + 0.5) / frameCount),
+                Math.max(0, videoDuration - 0.05),
+              );
         const framePath = join(
           keyframeDirectory,
           `frame-${String(index + 1).padStart(2, '0')}.jpg`,
@@ -322,6 +363,10 @@ export class StorageService implements OnModuleInit {
       return keyframes;
     } catch (error) {
       if (this.isMissingMediaTool(error)) {
+        if (sourceType === 'ANIMATED_IMAGE') {
+          return await this.readAnimatedImageFallback(mediaUrl);
+        }
+
         throw new ServiceUnavailableException(
           '视频 AI 分析需要安装 FFmpeg 和 ffprobe，或配置 FFMPEG_PATH 与 FFPROBE_PATH',
         );
@@ -341,6 +386,20 @@ export class StorageService implements OnModuleInit {
         () => undefined,
       );
     }
+  }
+
+  private async readAnimatedImageFallback(
+    mediaUrl: string,
+  ): Promise<MemeVideoKeyframe[]> {
+    const image = await this.readMemeImage(mediaUrl);
+
+    return [
+      {
+        timestamp: 0,
+        buffer: image.buffer,
+        mimeType: image.mimeType,
+      },
+    ];
   }
 
   async removeMemeMedia(

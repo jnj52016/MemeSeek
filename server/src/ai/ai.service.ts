@@ -1,7 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MemeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
+import {
+  isAnimatedImageMimeType,
+  StorageService,
+} from '../storage/storage.service';
 import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
 
 // 默认使用 OpenAI 视觉模型，也可以通过 AI_MODEL 切换模型。
@@ -104,12 +107,17 @@ export class AiService {
   private async resolveAnalysisImages(meme: {
     imageUrl: string;
     mediaType?: string | null;
+    mimeType?: string | null;
     duration?: number | null;
   }): Promise<AnalysisImage[]> {
-    if (meme.mediaType === 'VIDEO') {
-      const keyframes = await this.storage.readMemeVideoKeyframes(
+    const isAnimatedImage =
+      meme.mediaType === 'IMAGE' && isAnimatedImageMimeType(meme.mimeType);
+
+    if (meme.mediaType === 'VIDEO' || isAnimatedImage) {
+      const keyframes = await this.storage.readMemeMediaKeyframes(
         meme.imageUrl,
         meme.duration,
+        isAnimatedImage ? 'ANIMATED_IMAGE' : 'VIDEO',
       );
 
       return keyframes.map((keyframe) => ({
@@ -136,6 +144,7 @@ export class AiService {
       title: string;
       description: string;
       mediaType?: string | null;
+      mimeType?: string | null;
     },
     options: AnalyzeMemeOptions,
   ): Promise<MemeAnalysis> {
@@ -161,10 +170,14 @@ export class AiService {
       )
       .filter((item): item is string => item !== null)
       .join('、');
+    const isAnimatedImage =
+      meme.mediaType === 'IMAGE' && isAnimatedImageMimeType(meme.mimeType);
     const userPrompt =
       meme.mediaType === 'VIDEO'
         ? `请分析这段视频的关键帧。关键帧按照时间顺序排列${timeline ? `，时间点为：${timeline}` : ''}。请概括画面主体、动作变化、情绪和适合使用的语境。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`
-        : `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
+        : isAnimatedImage
+          ? `请分析这张动图${timeline ? `（关键帧时间点为：${timeline}）` : ''}。请概括画面主体、动作变化、情绪和适合使用的语境。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`
+          : `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
