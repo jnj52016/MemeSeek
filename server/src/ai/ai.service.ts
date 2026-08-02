@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { MemeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -59,6 +64,10 @@ export class AiService {
 
     if (!meme) {
       throw new NotFoundException(`Meme with id "${id}" not found`);
+    }
+
+    if (meme.mediaType === 'VIDEO') {
+      throw new BadRequestException('视频 AI 分析尚未实现');
     }
 
     await this.prisma.meme.update({

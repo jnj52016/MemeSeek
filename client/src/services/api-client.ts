@@ -135,7 +135,7 @@ export const memesApi = {
         }
 
         if (request.status < 200 || request.status >= 300) {
-          reject(new Error(getApiErrorMessage(payload, '图片上传失败')));
+          reject(new Error(getApiErrorMessage(payload, '媒体上传失败')));
           return;
         }
 
@@ -200,10 +200,12 @@ export const memesApi = {
   },
 };
 
-export function resolveMemeImageUrl(imageUrl: string): string {
-  if (/^https?:\/\//i.test(imageUrl) || !imageUrl.startsWith('/uploads/')) {
-    return imageUrl;
+export function resolveMemeMediaUrl(mediaUrl: string): string {
+  if (/^https?:\/\//i.test(mediaUrl) || !mediaUrl.startsWith('/uploads/')) {
+    return mediaUrl;
   }
 
-  return `${API_BASE_URL}${imageUrl}`;
+  return `${API_BASE_URL}${mediaUrl}`;
 }
+
+export const resolveMemeImageUrl = resolveMemeMediaUrl;

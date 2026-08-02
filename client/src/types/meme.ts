@@ -1,7 +1,11 @@
 /**
  * Meme 梗图数据
  * @property id 梗图唯一标识
- * @property imageUrl 梗图图片地址
+ * @property imageUrl 梗图图片或视频地址
+ * @property mediaType 媒体类型
+ * @property mimeType 媒体 MIME 类型
+ * @property thumbnailUrl 视频封面地址
+ * @property duration 视频时长（秒）
  * @property title 梗图标题
  * @property description 梗图描述
  * @property tags 梗图标签列表
@@ -14,15 +18,22 @@
 export type Meme = {
   id: string
   imageUrl: string
+  mediaType: MemeMediaType
+  mimeType?: string | null
+  thumbnailUrl?: string | null
+  duration?: number | null
   title: string
   description: string
   tags: string[]
   ocrText: string
+  transcript: string
   status: MemeStatus
   errorMessage?: string | null
   createdAt: string
   updatedAt: string
 }
+
+export type MemeMediaType = 'IMAGE' | 'VIDEO'
 
 /**
  * Meme 梗图的 AI 分析状态

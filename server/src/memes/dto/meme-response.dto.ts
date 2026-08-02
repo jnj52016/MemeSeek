@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MemeStatus } from '@prisma/client';
+import { MediaType, MemeStatus } from '@prisma/client';
 
 export class MemeResponseDto {
   @ApiProperty({ example: 'cmry37yj80000vznobcdlan7m' })
@@ -7,6 +7,18 @@ export class MemeResponseDto {
 
   @ApiProperty({ example: '/uploads/memes/example.png' })
   imageUrl!: string;
+
+  @ApiProperty({ enum: MediaType, enumName: 'MediaType', example: MediaType.IMAGE })
+  mediaType!: MediaType;
+
+  @ApiProperty({ type: String, nullable: true, example: 'image/png' })
+  mimeType!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, example: '/uploads/memes/thumbnails/example.jpg' })
+  thumbnailUrl!: string | null;
+
+  @ApiProperty({ type: Number, nullable: true, example: 12.5 })
+  duration!: number | null;
 
   @ApiProperty({ example: '程序员加班', default: '' })
   title!: string;
@@ -19,6 +31,9 @@ export class MemeResponseDto {
 
   @ApiProperty({ example: '', default: '' })
   ocrText!: string;
+
+  @ApiProperty({ example: '', default: '' })
+  transcript!: string;
 
   @ApiProperty({ enum: MemeStatus, enumName: 'MemeStatus', example: MemeStatus.COMPLETED })
   status!: MemeStatus;

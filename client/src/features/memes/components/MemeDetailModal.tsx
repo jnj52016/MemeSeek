@@ -10,7 +10,7 @@ import {
 } from 'antd'
 import { FolderOpenOutlined } from '@ant-design/icons'
 import { useState } from 'react'
-import { resolveMemeImageUrl } from '../../../services/api-client'
+import { resolveMemeMediaUrl } from '../../../services/api-client'
 import type { Meme, MemeStatus } from '../../../types/meme'
 
 type MemeDetailModalProps = {
@@ -28,6 +28,18 @@ const statusText: Record<MemeStatus, string> = {
   PROCESSING: '分析中',
   COMPLETED: '分析完成',
   FAILED: '分析失败',
+}
+
+function formatDuration(duration: number | null | undefined) {
+  if (duration === null || duration === undefined || !Number.isFinite(duration)) {
+    return null
+  }
+
+  const totalSeconds = Math.max(0, Math.round(duration))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 function MemeDetailModal({
@@ -143,10 +155,12 @@ function MemeDetailModal({
 
     try {
       await onOpenLocation(meme)
-      message.success('已打开图片所在位置')
+      message.success('已打开媒体文件所在位置')
     } catch (error) {
       message.error(
-        error instanceof Error ? error.message : '无法打开图片所在位置，请稍后重试',
+        error instanceof Error
+          ? error.message
+          : '无法打开媒体文件所在位置，请稍后重试',
       )
     } finally {
       setIsOpeningLocation(false)
@@ -188,11 +202,26 @@ function MemeDetailModal({
       {meme && (
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_240px]">
           <div className="space-y-3">
-            <img
-              src={resolveMemeImageUrl(meme.imageUrl)}
-              alt={meme.title}
-              className="max-h-[520px] w-full rounded-xl object-contain"
-            />
+            {meme.mediaType === 'VIDEO' ? (
+              <video
+                src={resolveMemeMediaUrl(meme.imageUrl)}
+                poster={
+                  meme.thumbnailUrl
+                    ? resolveMemeMediaUrl(meme.thumbnailUrl)
+                    : undefined
+                }
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-[520px] w-full rounded-xl bg-slate-950 object-contain"
+              />
+            ) : (
+              <img
+                src={resolveMemeMediaUrl(meme.imageUrl)}
+                alt={meme.title}
+                className="max-h-[520px] w-full rounded-xl object-contain"
+              />
+            )}
             {onOpenLocation && meme.imageUrl.startsWith('/uploads/memes/') && (
               <Button
                 block
@@ -271,6 +300,17 @@ function MemeDetailModal({
             ) : (
               <>
                 <div>
+                  <p className="mb-2 text-sm text-slate-500">素材信息</p>
+                  <p className="text-sm text-slate-700">
+                    {meme.mediaType === 'VIDEO' ? '视频' : '图片'}
+                    {formatDuration(meme.duration)
+                      ? ` · ${formatDuration(meme.duration)}`
+                      : ''}
+                    {meme.mimeType ? ` · ${meme.mimeType}` : ''}
+                  </p>
+                </div>
+
+                <div>
                   <p className="mb-2 text-sm text-slate-500">标题</p>
                   <p className="text-lg font-semibold text-slate-900">
                     {meme.title}
@@ -302,7 +342,9 @@ function MemeDetailModal({
             <div>
               <p className="mb-2 text-sm text-slate-500">AI 分析状态</p>
               <p className="text-sm text-slate-700">
-                {statusText[meme.status]}
+                {meme.mediaType === 'VIDEO'
+                  ? '视频已上传，视频 AI 分析暂未启用'
+                  : statusText[meme.status]}
               </p>
               {meme.status === 'FAILED' && (
                 <div className="mt-3 space-y-3">

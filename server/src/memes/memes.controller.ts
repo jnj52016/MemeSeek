@@ -29,7 +29,10 @@ import { FindMemesDto } from './dto/find-memes.dto';
 import { MemeListResponseDto, MemeResponseDto } from './dto/meme-response.dto';
 import { UpdateMemeDto } from './dto/update-meme.dto';
 import { MemesService } from './memes.service';
-import { MAX_MEME_IMAGE_SIZE } from '../storage/storage.service';
+import {
+  createMemeUploadStorage,
+  MAX_MEME_UPLOAD_SIZE,
+} from '../storage/storage.service';
 import type { MemeUploadFile } from '../storage/storage.service';
 
 @Controller('memes')
@@ -39,14 +42,22 @@ export class MemesController {
   constructor(private readonly memesService: MemesService) {}
 
   @Post()
-  @ApiOperation({ summary: '新增梗图' })
+  @ApiOperation({ summary: '新增图片或视频素材' })
   @ApiConsumes('application/json', 'multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
-        imageUrl: { type: 'string', example: '/uploads/memes/example.png' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '支持 JPG、PNG、GIF、WebP、MP4、WebM 和 MOV',
+        },
+        imageUrl: {
+          type: 'string',
+          example: '/uploads/memes/example.png',
+          description: '已有媒体地址；上传文件时不需要填写',
+        },
         title: { type: 'string' },
         description: { type: 'string' },
         tags: { type: 'array', items: { type: 'string' } },
@@ -56,10 +67,8 @@ export class MemesController {
   @ApiResponse({ status: 201, type: MemeResponseDto })
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: MAX_MEME_IMAGE_SIZE },
-      fileFilter: (_request, file, callback) => {
-        callback(null, file.mimetype.startsWith('image/'));
-      },
+      storage: createMemeUploadStorage(),
+      limits: { fileSize: MAX_MEME_UPLOAD_SIZE },
     }),
   )
   create(
@@ -71,7 +80,12 @@ export class MemesController {
 
   @Get()
   @ApiOperation({ summary: '查询梗图列表' })
-  @ApiQuery({ name: 'q', required: false, type: String, description: '搜索标题、描述或 OCR 文本' })
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    type: String,
+    description: '搜索标题、描述、OCR 文本或视频转写文本',
+  })
   @ApiQuery({ name: 'status', required: false, enum: MemeStatus })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 20 })

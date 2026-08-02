@@ -1,6 +1,6 @@
 // 这个是一个 MemeCard 组件，用于显示单个 meme 的信息，包括图片和标题。用户可以点击卡片查看详情。
 import { Tag } from 'antd'
-import { resolveMemeImageUrl } from '../../../services/api-client'
+import { resolveMemeMediaUrl } from '../../../services/api-client'
 import type { Meme } from '../../../types/meme'
 
 type MemeCardProps = {
@@ -22,12 +22,28 @@ function MemeCard({ meme, onClick }: MemeCardProps) {
       onClick={onClick}
       className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
     >
-      <img
-        src={resolveMemeImageUrl(meme.imageUrl)}
-        alt={meme.title}
-        loading="lazy"
-        className="h-44 w-full object-cover"
-      />
+      {meme.mediaType === 'VIDEO' ? (
+        <video
+          src={resolveMemeMediaUrl(meme.imageUrl)}
+          poster={
+            meme.thumbnailUrl
+              ? resolveMemeMediaUrl(meme.thumbnailUrl)
+              : undefined
+          }
+          aria-label={meme.title}
+          muted
+          playsInline
+          preload="metadata"
+          className="h-44 w-full bg-slate-950 object-cover"
+        />
+      ) : (
+        <img
+          src={resolveMemeMediaUrl(meme.imageUrl)}
+          alt={meme.title}
+          loading="lazy"
+          className="h-44 w-full object-cover"
+        />
+      )}
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
@@ -36,7 +52,9 @@ function MemeCard({ meme, onClick }: MemeCardProps) {
             {statusConfig[meme.status].label}
           </Tag>
         </div>
-        <p className="mt-1 text-sm text-slate-500">点击查看详情</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {meme.mediaType === 'VIDEO' ? '视频素材 · 点击查看详情' : '点击查看详情'}
+        </p>
       </div>
     </button>
   )

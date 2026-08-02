@@ -15,8 +15,33 @@ type MemeUploadDrawerProps = {
 
 type UploadStatus = 'IDLE' | 'UPLOADING' | 'COMPLETED' | 'FAILED'
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024
+const VIDEO_MIME_TYPES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+])
+
+function getUploadMediaType(file: File) {
+  if (file.type.startsWith('image/')) {
+    return 'IMAGE' as const
+  }
+
+  const extension = file.name.split('.').pop()?.toLowerCase()
+
+  if (
+    VIDEO_MIME_TYPES.has(file.type.toLowerCase()) ||
+    ['mp4', 'webm', 'mov'].includes(extension ?? '')
+  ) {
+    return 'VIDEO' as const
+  }
+
+  return null
+}
+
 function getTitleFromFileName(fileName: string) {
-  return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传梗图'
+  return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传素材'
 }
 
 function getPastedFileName(mimeType: string) {
@@ -57,13 +82,21 @@ function MemeUploadDrawer({
   }, [previewUrl])
 
   const selectFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      message.error('请选择图片文件')
+    const mediaType = getUploadMediaType(file)
+
+    if (!mediaType) {
+      message.error('请选择 JPG、PNG、GIF、WebP、MP4、WebM 或 MOV 文件')
       return false
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      message.error('图片大小不能超过 10MB')
+    const maxSize = mediaType === 'VIDEO' ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+
+    if (file.size > maxSize) {
+      message.error(
+        mediaType === 'VIDEO'
+          ? '视频大小不能超过 500MB'
+          : '图片大小不能超过 10MB',
+      )
       return false
     }
 
@@ -154,7 +187,7 @@ function MemeUploadDrawer({
 
       const aiSettings = loadAiSettings()
 
-      if (aiSettings.analysis.apiKey.trim()) {
+      if (meme.mediaType === 'IMAGE' && aiSettings.analysis.apiKey.trim()) {
         meme = await memesApi.analyze(meme.id, {
           baseUrl: aiSettings.analysis.baseUrl,
           apiKey: aiSettings.analysis.apiKey.trim(),
@@ -170,8 +203,10 @@ function MemeUploadDrawer({
       if (meme.status === 'FAILED') {
         setAnalysisError(meme.errorMessage ?? 'AI 分析失败，请稍后重试')
         message.warning('梗图已上传，但 AI 分析失败')
+      } else if (meme.mediaType === 'VIDEO') {
+        message.success('视频已上传并加入列表，视频 AI 分析暂未启用')
       } else {
-        message.success('梗图已上传并加入列表')
+        message.success('图片已上传并加入列表')
       }
     } catch (error) {
       if (cancelledRef.current) {
@@ -180,12 +215,14 @@ function MemeUploadDrawer({
 
       setUploadStatus('FAILED')
       message.error(
-        error instanceof Error ? error.message : '图片上传失败，请重试',
+        error instanceof Error ? error.message : '媒体上传失败，请重试',
       )
     }
   }
 
   const isProcessing = uploadStatus === 'UPLOADING'
+  const isVideo =
+    selectedFile !== null && getUploadMediaType(selectedFile) === 'VIDEO'
 
   return (
     <Drawer
@@ -197,7 +234,7 @@ function MemeUploadDrawer({
     >
       <div className="space-y-6">
         <div
-          aria-label="图片上传区域，支持点击、拖拽或粘贴图片"
+          aria-label="媒体上传区域，支持点击、拖拽或粘贴图片"
           className="rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
           data-testid="meme-upload-zone"
           onClick={(event) => event.currentTarget.focus()}
@@ -207,7 +244,7 @@ function MemeUploadDrawer({
         >
           <Upload.Dragger
             name="file"
-            accept="image/*"
+            accept="image/*,video/mp4,video/webm,video/quicktime,.mov"
             multiple={false}
             disabled={isProcessing || uploadStatus === 'COMPLETED'}
             showUploadList={false}
@@ -216,19 +253,34 @@ function MemeUploadDrawer({
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
-            <p className="ant-upload-text">点击、拖拽或 Ctrl+V 粘贴图片</p>
-            <p className="ant-upload-hint">支持常见图片格式，大小不超过 10MB</p>
+            <p className="ant-upload-text">
+              点击、拖拽上传视频，或 Ctrl+V 粘贴图片
+            </p>
+            <p className="ant-upload-hint">
+              图片不超过 10MB，视频不超过 500MB；支持 MP4、WebM 和 MOV
+            </p>
           </Upload.Dragger>
         </div>
 
         {previewUrl && selectedFile && (
           <div className="space-y-3">
-            <p className="font-medium text-slate-900">图片预览</p>
-            <img
-              src={previewUrl}
-              alt={selectedFile.name}
-              className="max-h-72 w-full rounded-xl object-contain"
-            />
+            <p className="font-medium text-slate-900">
+              {isVideo ? '视频预览' : '图片预览'}
+            </p>
+            {isVideo ? (
+              <video
+                src={previewUrl}
+                controls
+                preload="metadata"
+                className="max-h-72 w-full rounded-xl bg-slate-950 object-contain"
+              />
+            ) : (
+              <img
+                src={previewUrl}
+                alt={selectedFile.name}
+                className="max-h-72 w-full rounded-xl object-contain"
+              />
+            )}
             <div className="flex items-center justify-between gap-3">
               <p className="truncate text-sm text-slate-500">
                 {selectedFile.name}
@@ -250,7 +302,11 @@ function MemeUploadDrawer({
         )}
 
         {uploadStatus === 'COMPLETED' && !analysisError && (
-          <Alert message="上传完成，梗图已加入列表" type="success" showIcon />
+          <Alert
+            message={isVideo ? '视频上传完成，已加入列表' : '图片上传完成，已加入列表'}
+            type="success"
+            showIcon
+          />
         )}
 
         {uploadStatus === 'COMPLETED' && analysisError && (

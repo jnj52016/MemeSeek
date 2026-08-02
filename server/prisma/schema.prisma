@@ -13,13 +13,23 @@ enum MemeStatus {
   FAILED
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
 model Meme {
   id           String     @id @default(cuid())
   imageUrl     String
+  mediaType    MediaType  @default(IMAGE)
+  mimeType     String?
+  thumbnailUrl String?
+  duration     Float?
   title        String     @default("")
   description  String     @default("")
   tags         String[]   @default([])
   ocrText      String     @default("")
+  transcript   String     @default("")
   status       MemeStatus @default(PROCESSING)
   errorMessage String?
   createdAt    DateTime   @default(now())

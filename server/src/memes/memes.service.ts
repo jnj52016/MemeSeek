@@ -22,17 +22,24 @@ export class MemesService {
 
   async create(dto: CreateMemeDto, file?: MemeUploadFile) {
     if (!dto.imageUrl && !file) {
-      throw new BadRequestException('请提供 imageUrl 或上传图片文件');
+      throw new BadRequestException('请提供 imageUrl 或上传图片/视频文件');
     }
 
-    const imageUrl = file
-      ? await this.storage.saveMemeImage(file)
-      : dto.imageUrl!;
+    const savedMedia = file ? await this.storage.saveMemeFile(file) : null;
+    const imageUrl = savedMedia?.mediaUrl ?? dto.imageUrl!;
 
     try {
       return await this.prisma.meme.create({
         data: {
           imageUrl,
+          ...(savedMedia
+            ? {
+                mediaType: savedMedia.mediaType,
+                mimeType: savedMedia.mimeType,
+                thumbnailUrl: savedMedia.thumbnailUrl,
+                duration: savedMedia.duration,
+              }
+            : {}),
           title: dto.title,
           description: dto.description,
           tags: dto.tags,
@@ -41,7 +48,9 @@ export class MemesService {
       });
     } catch (error) {
       if (file) {
-        await this.storage.removeMemeImage(imageUrl).catch(() => undefined);
+        await this.storage
+          .removeMemeMedia(imageUrl, savedMedia?.thumbnailUrl)
+          .catch(() => undefined);
       }
 
       throw error;
@@ -58,6 +67,7 @@ export class MemesService {
               { title: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
               { ocrText: { contains: search, mode: 'insensitive' } },
+              { transcript: { contains: search, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -95,7 +105,7 @@ export class MemesService {
   async openLocation(id: string) {
     const meme = await this.findOne(id);
 
-    await this.storage.openMemeImageLocation(meme.imageUrl);
+    await this.storage.openMemeMediaLocation(meme.imageUrl);
 
     return { success: true };
   }
@@ -118,7 +128,7 @@ export class MemesService {
 
     const deletedMeme = await this.prisma.meme.delete({ where: { id } });
 
-    await this.storage.removeMemeImage(meme.imageUrl);
+    await this.storage.removeMemeMedia(meme.imageUrl, meme.thumbnailUrl);
 
     return deletedMeme;
   }

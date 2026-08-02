@@ -111,11 +111,21 @@ export interface components {
         };
         /** @enum {string} */
         MemeStatus: "PROCESSING" | "COMPLETED" | "FAILED";
+        /** @enum {string} */
+        MediaType: "IMAGE" | "VIDEO";
         MemeResponseDto: {
             /** @example cmry37yj80000vznobcdlan7m */
             id: string;
             /** @example /uploads/memes/example.png */
             imageUrl: string;
+            /** @example IMAGE */
+            mediaType: components["schemas"]["MediaType"];
+            /** @example image/png */
+            mimeType: string | null;
+            /** @example /uploads/memes/thumbnails/example.jpg */
+            thumbnailUrl: string | null;
+            /** @example 12.5 */
+            duration: number | null;
             /**
              * @default
              * @example 程序员加班
@@ -138,6 +148,10 @@ export interface components {
              * @example
              */
             ocrText: string;
+            /** @default
+             * @example
+             */
+            transcript: string;
             /** @example COMPLETED */
             status: components["schemas"]["MemeStatus"];
             /** @example null */
@@ -212,7 +226,7 @@ export interface operations {
     MemesController_findAll: {
         parameters: {
             query?: {
-                /** @description 搜索标题、描述或 OCR 文本 */
+                /** @description 搜索标题、描述、OCR 文本或视频转写文本 */
                 q?: string;
                 status?: components["schemas"]["MemeStatus"];
                 page?: number;
