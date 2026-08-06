@@ -136,4 +136,127 @@ describe('AiService', () => {
       }),
     );
   });
+
+  it('sends a video first-frame thumbnail to the vision model', async () => {
+    prisma.meme.findUnique.mockResolvedValue({
+      ...meme,
+      mediaType: 'VIDEO',
+      mimeType: 'video/mp4',
+      thumbnailUrl: '/uploads/memes/thumbnails/clip.jpg',
+    });
+    storage.readMemeImage.mockResolvedValue({
+      buffer: Buffer.from('video first frame'),
+      mimeType: 'image/jpeg',
+    });
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  title: '视频首帧',
+                  description: '视频首帧画面',
+                  tags: ['视频'],
+                  ocrText: '',
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const result = await service.analyzeMeme('meme-1', {
+      baseUrl: 'https://vision.example/v1',
+      apiKey: 'test-key',
+      model: 'vision-model',
+    });
+
+    expect(result.status).toBe(MemeStatus.COMPLETED);
+    expect(storage.readMemeImage).toHaveBeenCalledWith(
+      '/uploads/memes/thumbnails/clip.jpg',
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const requestBody = JSON.parse(String(requestInit.body));
+    expect(requestBody.messages[1].content[0].text).toContain('第一帧');
+    expect(requestBody.messages[1].content).toContainEqual({
+      type: 'image_url',
+      image_url: {
+        url: 'data:image/jpeg;base64,dmlkZW8gZmlyc3QgZnJhbWU=',
+      },
+    });
+  });
+
+  it('persists a failed state when a video has no first-frame thumbnail', async () => {
+    prisma.meme.findUnique.mockResolvedValue({
+      ...meme,
+      mediaType: 'VIDEO',
+      mimeType: 'video/mp4',
+      thumbnailUrl: null,
+    });
+
+    const result = await service.analyzeMeme('meme-1', { apiKey: 'test-key' });
+
+    expect(result.status).toBe(MemeStatus.FAILED);
+    expect(result.errorMessage).toContain('首帧封面');
+    expect(storage.readMemeImage).not.toHaveBeenCalled();
+  });
+
+  it('can complete video analysis after a failed attempt is retried', async () => {
+    prisma.meme.findUnique.mockResolvedValue({
+      ...meme,
+      mediaType: 'VIDEO',
+      mimeType: 'video/mp4',
+      thumbnailUrl: '/uploads/memes/thumbnails/clip.jpg',
+    });
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { message: 'temporary outage' } }), {
+          status: 503,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    title: '重试成功',
+                    description: '重试后完成分析',
+                    tags: ['重试'],
+                    ocrText: '',
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const failed = await service.analyzeMeme('meme-1', {
+      baseUrl: 'https://vision.example/v1',
+      apiKey: 'test-key',
+      model: 'vision-model',
+    });
+    const completed = await service.analyzeMeme('meme-1', {
+      baseUrl: 'https://vision.example/v1',
+      apiKey: 'test-key',
+      model: 'vision-model',
+    });
+
+    expect(failed.status).toBe(MemeStatus.FAILED);
+    expect(completed).toEqual(
+      expect.objectContaining({
+        status: MemeStatus.COMPLETED,
+        title: '重试成功',
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

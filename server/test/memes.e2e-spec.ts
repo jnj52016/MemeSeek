@@ -104,6 +104,49 @@ describe('Memes API (e2e)', () => {
     await request(app.getHttpServer()).get(meme.imageUrl).expect(404);
   });
 
+  it('uploads a video with a first-frame thumbnail and deletes both files', async () => {
+    const title = `e2e-${testRunId}-video`;
+    const uploadResponse = await request(app.getHttpServer())
+      .post('/memes')
+      .field('title', title)
+      .attach('file', Buffer.from('fake video bytes'), {
+        filename: 'fixture.mp4',
+        contentType: 'video/mp4',
+      })
+      .attach('thumbnail', Buffer.from('fake jpeg bytes'), {
+        filename: 'fixture-thumbnail.jpg',
+        contentType: 'image/jpeg',
+      })
+      .expect(201);
+
+    const meme = uploadResponse.body;
+    createdMemeIds.add(meme.id);
+
+    expect(meme).toEqual(
+      expect.objectContaining({
+        title,
+        mediaType: 'VIDEO',
+        mimeType: 'video/mp4',
+        thumbnailUrl: expect.stringMatching(
+          /^\/uploads\/memes\/thumbnails\/.+\.jpg$/,
+        ),
+        duration: null,
+        status: 'COMPLETED',
+      }),
+    );
+
+    await request(app.getHttpServer()).get(meme.imageUrl).expect(200);
+    await request(app.getHttpServer()).get(meme.thumbnailUrl).expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/memes/${meme.id}`)
+      .expect(200);
+    createdMemeIds.delete(meme.id);
+
+    await request(app.getHttpServer()).get(meme.imageUrl).expect(404);
+    await request(app.getHttpServer()).get(meme.thumbnailUrl).expect(404);
+  });
+
   it('rejects missing images, non-image uploads, and invalid DTOs', async () => {
     await request(app.getHttpServer())
       .post('/memes')
@@ -116,6 +159,28 @@ describe('Memes API (e2e)', () => {
       .attach('file', Buffer.from('not an image'), {
         filename: 'fixture.txt',
         contentType: 'text/plain',
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/memes')
+      .field('title', `e2e-${testRunId}-missing-video-thumbnail`)
+      .attach('file', Buffer.from('not a real video'), {
+        filename: 'fixture.mp4',
+        contentType: 'video/mp4',
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/memes')
+      .field('title', `e2e-${testRunId}-wrong-video-extension`)
+      .attach('file', Buffer.from('not a real video'), {
+        filename: 'fixture.mov',
+        contentType: 'video/mp4',
+      })
+      .attach('thumbnail', Buffer.from('fake jpeg bytes'), {
+        filename: 'fixture-thumbnail.jpg',
+        contentType: 'image/jpeg',
       })
       .expect(400);
 

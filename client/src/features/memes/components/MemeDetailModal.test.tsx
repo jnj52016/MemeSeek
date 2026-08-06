@@ -122,6 +122,34 @@ describe('MemeDetailModal', () => {
     expect(screen.getByText('AI 请求超时')).toBeInTheDocument()
   })
 
+  it('renders a video player with its first-frame poster and metadata', () => {
+    const { container } = render(
+      <MemeDetailModal
+        meme={{
+          ...meme,
+          mediaType: 'VIDEO',
+          mimeType: 'video/mp4',
+          imageUrl: '/uploads/memes/clip.mp4',
+          thumbnailUrl: '/uploads/memes/thumbnails/clip.jpg',
+          duration: 12.4,
+        }}
+        open
+        onClose={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    const video = container.querySelector('video')
+
+    expect(video).toBeInTheDocument()
+    expect(video).toHaveAttribute(
+      'poster',
+      'http://localhost:3000/uploads/memes/thumbnails/clip.jpg',
+    )
+    expect(screen.getByText(/视频.*0:12.*video\/mp4/)).toBeInTheDocument()
+  })
+
   it('calls the re-analysis handler for a failed meme', async () => {
     const user = userEvent.setup()
     const onAnalyze = vi.fn().mockResolvedValue({
