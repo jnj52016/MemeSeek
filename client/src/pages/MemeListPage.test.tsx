@@ -5,8 +5,8 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MemeListPage from './MemeListPage'
 import { memesApi } from '../services/api-client'
+import type { Meme as ApiMeme } from '../services/api-client'
 import { saveAiSettings } from '../services/ai-settings-storage'
-import type { Meme } from '../types/meme'
 
 function LocationProbe() {
   const location = useLocation()
@@ -71,7 +71,7 @@ describe('MemeListPage', () => {
 
   it('re-analyzes a failed meme with the analysis provider settings', async () => {
     const user = userEvent.setup()
-    const failedMeme: Meme = {
+    const failedMeme: ApiMeme = {
       id: 'failed-meme',
       imageUrl: '/uploads/memes/failed.png',
       mediaType: 'IMAGE',

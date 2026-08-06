@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MemeUploadDrawer from './MemeUploadDrawer'
 import { memesApi } from '../../../services/api-client'
+import type { Meme as ApiMeme } from '../../../services/api-client'
 import { saveAiSettings } from '../../../services/ai-settings-storage'
-import type { Meme } from '../../../types/meme'
 
-function createMeme(overrides: Partial<Meme> = {}): Meme {
+function createMeme(overrides: Partial<ApiMeme> = {}): ApiMeme {
   return {
     id: 'test-meme',
     imageUrl: '/uploads/memes/test.png',
@@ -286,9 +286,11 @@ describe('MemeUploadDrawer', () => {
 
   it('shows the upload failure state when a video first frame cannot be generated', async () => {
     const user = userEvent.setup()
-    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function () {
-      queueMicrotask(() => this.dispatchEvent(new Event('error')))
-    })
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(
+      function (this: HTMLMediaElement) {
+        queueMicrotask(() => this.dispatchEvent(new Event('error')))
+      },
+    )
     const upload = vi.spyOn(memesApi, 'upload')
 
     render(

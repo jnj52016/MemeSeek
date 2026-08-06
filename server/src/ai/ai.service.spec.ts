@@ -93,6 +93,19 @@ describe('AiService', () => {
         }) as unknown,
       }),
     );
+    expect(prisma.meme.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { id: 'meme-1' },
+        data: expect.objectContaining({
+          title: '猫猫震惊',
+          description: '一只猫露出惊讶的表情。',
+          tags: ['猫', '震惊'],
+          ocrText: '',
+          status: MemeStatus.COMPLETED,
+          errorMessage: null,
+        }) as unknown,
+      }),
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://vision.example/v1/chat/completions',
@@ -215,9 +228,10 @@ describe('AiService', () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: { message: 'temporary outage' } }), {
-          status: 503,
-        }),
+        new Response(
+          JSON.stringify({ error: { message: 'temporary outage' } }),
+          { status: 503 },
+        ),
       )
       .mockResolvedValueOnce(
         new Response(
