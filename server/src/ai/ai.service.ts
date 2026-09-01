@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { MemeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -92,18 +93,18 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly storage: StorageService,
+    @Optional() private readonly prisma?: PrismaService,
+    @Optional() private readonly storage?: StorageService,
   ) {}
 
   async analyzeMeme(id: string, options: AnalyzeMemeOptions) {
-    const meme = await this.prisma.meme.findUnique({ where: { id } });
+    const meme = await this.getPrisma().meme.findUnique({ where: { id } });
 
     if (!meme) {
       throw new NotFoundException(`Meme with id "${id}" not found`);
     }
 
-    await this.prisma.meme.update({
+    await this.getPrisma().meme.update({
       where: { id },
       data: { status: MemeStatus.PROCESSING, errorMessage: null },
     });
@@ -112,7 +113,7 @@ export class AiService {
       const imageSources = await this.resolveAnalysisImages(meme);
       const analysis = await this.requestAnalysis(imageSources, meme, options);
 
-      return this.prisma.meme.update({
+      return this.getPrisma().meme.update({
         where: { id },
         data: {
           title: analysis.title,
@@ -127,7 +128,7 @@ export class AiService {
       const errorMessage = this.getErrorMessage(error);
       this.logger.warn(`Meme ${id} AI analysis failed: ${errorMessage}`);
 
-      return this.prisma.meme.update({
+      return this.getPrisma().meme.update({
         where: { id },
         data: {
           status: MemeStatus.FAILED,
@@ -198,7 +199,7 @@ export class AiService {
       return imageUrl;
     }
 
-    const image = await this.storage.readMemeImage(imageUrl);
+    const image = await this.getStorage().readMemeImage(imageUrl);
     return `data:${image.mimeType};base64,${image.buffer.toString('base64')}`;
   }
 
@@ -372,6 +373,20 @@ export class AiService {
         '当前 AI 服务地址未被服务器允许，请联系部署者配置白名单。',
       );
     }
+  }
+
+  private getPrisma(): PrismaService {
+    if (!this.prisma) {
+      throw new Error('当前服务仅启用了本地媒体 AI 分析，不支持旧梗图数据库接口。');
+    }
+    return this.prisma;
+  }
+
+  private getStorage(): StorageService {
+    if (!this.storage) {
+      throw new Error('当前服务仅启用了本地媒体 AI 分析，不支持旧文件存储接口。');
+    }
+    return this.storage;
   }
 
   private parseAnalysis(content: string): MemeAnalysis {

@@ -1,11 +1,11 @@
 //配置路由
-//react-router-dom v6.4+版本使用createBrowserRouter来创建路由
+// 使用 Hash Router，确保 CloudBase 静态应用域名刷新子页面时不依赖服务器回退。
 //目前有两个页面，分别是梗图库页面和AI设置页面
-import { createBrowserRouter } from 'react-router'
+import { createHashRouter } from 'react-router'
 import AiSettingsPage from './pages/AiSettingsPage'
 import MemeListPage from './pages/MemeListPage'
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: '/',
     element: <MemeListPage />,
