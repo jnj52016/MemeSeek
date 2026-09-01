@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router/dom'
 import './index.css'
+import LocalLibraryGate from './components/LocalLibraryGate'
 import { queryClient } from './services/query-client'
 import { router } from './router'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <LocalLibraryGate>
+        <RouterProvider router={router} />
+      </LocalLibraryGate>
     </QueryClientProvider>
   </StrictMode>,
 )

@@ -3,14 +3,16 @@ import { Alert, Button, Drawer, message, Progress, Upload } from 'antd'
 import type { UploadProps } from 'antd'
 import type { ClipboardEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { memesApi } from '../../../services/api-client'
-import { loadAiSettings } from '../../../services/ai-settings-storage'
-import type { Meme } from '../../../types/meme'
+import {
+  importLocalMedia,
+  type LocalMemeRecord,
+} from '../../../services/local-library'
+import { useLocalLibrary } from '../../../services/local-library-context'
 
 type MemeUploadDrawerProps = {
   open: boolean
   onClose: () => void
-  onUploaded: (meme: Meme) => void
+  onUploaded: (record: LocalMemeRecord) => void
 }
 
 type UploadStatus = 'IDLE' | 'UPLOADING' | 'COMPLETED' | 'FAILED'
@@ -40,10 +42,6 @@ function getUploadMediaType(file: File) {
   }
 
   return null
-}
-
-function getTitleFromFileName(fileName: string) {
-  return fileName.replace(/\.[^/.]+$/, '').trim() || '新上传素材'
 }
 
 async function createJpegThumbnail(
@@ -154,6 +152,7 @@ function MemeUploadDrawer({
   onClose,
   onUploaded,
 }: MemeUploadDrawerProps) {
+  const library = useLocalLibrary()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('IDLE')
@@ -266,54 +265,31 @@ function MemeUploadDrawer({
 
     try {
       const selectedMediaType = getUploadMediaType(selectedFile)
-      const thumbnail =
+      const needsThumbnail =
         selectedMediaType === 'VIDEO'
+          ? true
+          : ['image/gif', 'image/webp'].includes(selectedFile.type.toLowerCase())
+      const thumbnail = needsThumbnail
+        ? selectedMediaType === 'VIDEO'
           ? await createVideoThumbnail(selectedFile)
-          : selectedMediaType === 'IMAGE'
-            ? await createImageThumbnail(selectedFile)
-            : undefined
+          : await createImageThumbnail(selectedFile)
+        : undefined
 
-      let meme = await memesApi.upload(
+      setProgress(45)
+      const record = await importLocalMedia(
+        library.directory,
         selectedFile,
-        { title: getTitleFromFileName(selectedFile.name), thumbnail },
-        (nextProgress) => {
-          if (!cancelledRef.current) {
-            setProgress(nextProgress)
-          }
-        },
+        thumbnail,
       )
 
       if (cancelledRef.current) {
         return
       }
 
-      const aiSettings = loadAiSettings()
-
-      // 图片和视频都使用分析 AI；视频和动图只发送浏览器生成的首帧封面。
-      if (aiSettings.analysis.apiKey.trim()) {
-        meme = await memesApi.analyze(meme.id, {
-          baseUrl: aiSettings.analysis.baseUrl,
-          apiKey: aiSettings.analysis.apiKey.trim(),
-          model: aiSettings.analysis.model,
-          recommendedTags: aiSettings.recommendedTags,
-        })
-      }
-
       setProgress(100)
       setUploadStatus('COMPLETED')
-      onUploaded(meme)
-
-      if (meme.status === 'FAILED') {
-        setAnalysisError(meme.errorMessage ?? 'AI 分析失败，请稍后重试')
-        message.warning('梗图已上传，但 AI 分析失败')
-      } else if (
-        meme.mediaType === 'VIDEO' &&
-        aiSettings.analysis.apiKey.trim()
-      ) {
-        message.success('视频已上传并完成 AI 分析')
-      } else {
-        message.success('素材已上传并加入列表')
-      }
+      onUploaded(record)
+      message.success('素材已保存到本地梗图文件夹')
     } catch (error) {
       if (cancelledRef.current) {
         return
@@ -409,7 +385,7 @@ function MemeUploadDrawer({
 
         {uploadStatus === 'COMPLETED' && !analysisError && (
           <Alert
-            message={isVideo ? '视频上传完成，已加入列表' : '图片上传完成，已加入列表'}
+            message={isVideo ? '视频已保存到本地文件夹' : '图片已保存到本地文件夹'}
             type="success"
             showIcon
           />

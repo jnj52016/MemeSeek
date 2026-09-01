@@ -19,4 +19,17 @@ describe('AppController', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
   });
+
+  describe('health', () => {
+    it('returns the health contract fields', () => {
+      expect(appController.getHealth()).toEqual(
+        expect.objectContaining({
+          status: 'ok',
+          service: 'memeseek-api',
+          version: '1.0.0',
+          timestamp: expect.any(String),
+        }),
+      );
+    });
+  });
 });

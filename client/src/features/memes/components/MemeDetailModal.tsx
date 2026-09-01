@@ -383,6 +383,15 @@ function MemeDetailModal({
               <p className="text-sm text-slate-700">
                 {statusText[meme.status]}
               </p>
+              {onAnalyze && meme.status !== 'FAILED' && (
+                <Button
+                  className="mt-3"
+                  loading={isSubmitting}
+                  onClick={() => void handleAnalyze()}
+                >
+                  AI 分析
+                </Button>
+              )}
               {meme.status === 'FAILED' && (
                 <div className="mt-3 space-y-3">
                   <Alert

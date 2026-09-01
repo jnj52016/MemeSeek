@@ -4,9 +4,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'node:path';
 import * as express from 'express';
 import { AppModule } from './app.module';
+import { ApiExceptionFilter } from './common/api-exception.filter';
+import { requestIdMiddleware } from './common/request-id.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(requestIdMiddleware);
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
   app.enableCors({
     origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
@@ -18,6 +21,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new ApiExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('MemeSeek API')

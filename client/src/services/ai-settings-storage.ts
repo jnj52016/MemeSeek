@@ -32,10 +32,10 @@ function normalizeProviderSettings(
 
   return {
     baseUrl: baseUrl || fallback.baseUrl,
-    // Do not keep models from the previous Qwen/DeepSeek setup after the
-    // application has switched to OpenAI.
+    // Do not keep models from the previous Qwen setup. DeepSeek now has a
+    // vision-capable model and must remain selectable.
     model:
-      !model || /^(qwen|deepseek)([-_]|$)/i.test(model)
+      !model || /^qwen([_-]|$)/i.test(model)
         ? fallback.model
         : model,
     apiKey,

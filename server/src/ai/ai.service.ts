@@ -11,9 +11,12 @@ import {
   StorageService,
 } from '../storage/storage.service';
 import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
+import { LocalAnalysisSourceMediaType } from './dto/analyze-local-media.dto';
+import { AiAnalysisError } from './ai-analysis.error';
 
 // 默认使用 OpenAI 视觉模型，也可以通过 AI_MODEL 切换模型。
 export const DEFAULT_AI_MODEL = 'gpt-4o';
+const DEFAULT_AI_BASE_URL = 'https://api.openai.com/v1';
 
 const AI_REQUEST_TIMEOUT_MS = 120_000;
 const AI_NETWORK_MAX_ATTEMPTS = 2;
@@ -74,6 +77,16 @@ type AnalyzeMemeOptions = AnalyzeMemeDto & {
   apiKey: string;
 };
 
+type AiRequestOptions = AnalyzeMemeOptions;
+
+type AnalyzeLocalImageOptions = AiRequestOptions & {
+  buffer: Buffer;
+  mimeType: string;
+  sourceMediaType: LocalAnalysisSourceMediaType;
+  title: string;
+  description: string;
+};
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
@@ -124,6 +137,39 @@ export class AiService {
     }
   }
 
+  /**
+   * Uses an in-memory image supplied by the browser. This path deliberately
+   * does not read or write a database record or the server upload directory.
+   */
+  async analyzeLocalImage(options: AnalyzeLocalImageOptions): Promise<MemeAnalysis> {
+    const mimeType = options.mimeType.toLowerCase();
+    const mediaType =
+      options.sourceMediaType === LocalAnalysisSourceMediaType.VIDEO_FIRST_FRAME
+        ? 'VIDEO'
+        : 'IMAGE';
+    const promptMimeType =
+      options.sourceMediaType ===
+      LocalAnalysisSourceMediaType.ANIMATED_IMAGE_FIRST_FRAME
+        ? 'image/gif'
+        : mimeType;
+
+    return this.requestAnalysis(
+      [
+        {
+          url: `data:${mimeType};base64,${options.buffer.toString('base64')}`,
+        },
+      ],
+      {
+        title: options.title,
+        description: options.description,
+        mediaType,
+        mimeType: promptMimeType,
+      },
+      options,
+      true,
+    );
+  }
+
   private async resolveAnalysisImages(meme: {
     imageUrl: string;
     mediaType?: string | null;
@@ -164,10 +210,11 @@ export class AiService {
       mediaType?: string | null;
       mimeType?: string | null;
     },
-    options: AnalyzeMemeOptions,
+    options: AiRequestOptions,
+    mapErrorsForApi = false,
   ): Promise<MemeAnalysis> {
     const configuredBaseUrl =
-      options.baseUrl?.trim() || process.env.AI_BASE_URL;
+      options.baseUrl?.trim() || process.env.AI_BASE_URL || DEFAULT_AI_BASE_URL;
     const baseUrl = configuredBaseUrl?.replace(/\/$/, '');
 
     if (!baseUrl) {
@@ -175,6 +222,8 @@ export class AiService {
         '未配置 AI_BASE_URL。请配置支持图片输入的 OpenAI 兼容模型接口。',
       );
     }
+
+    this.assertAllowedAiBaseUrl(baseUrl);
 
     const model =
       options.model?.trim() || process.env.AI_MODEL || DEFAULT_AI_MODEL;
@@ -188,9 +237,12 @@ export class AiService {
         : isAnimatedImage
           ? `请分析这张动图的第一帧画面。请概括画面主体、可见动作线索、情绪和适合使用的语境。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`
           : `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
-    const response = await this.fetchWithNetworkRetry(
-      `${baseUrl}/chat/completions`,
-      {
+    let response: Response;
+
+    try {
+      response = await this.fetchWithNetworkRetry(
+        `${baseUrl}/chat/completions`,
+        {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${options.apiKey}`,
@@ -216,18 +268,58 @@ export class AiService {
             },
           ],
         }),
-      },
-    );
+        },
+      );
+    } catch (error) {
+      if (!mapErrorsForApi) {
+        throw error;
+      }
+
+      if (
+        error instanceof Error &&
+        (error.name === 'AbortError' || error.name === 'TimeoutError')
+      ) {
+        throw new AiAnalysisError(504, 'AI_TIMEOUT', 'AI 分析超时，请稍后重试。');
+      }
+
+      throw new AiAnalysisError(
+        502,
+        'AI_UPSTREAM_ERROR',
+        'AI 服务暂时不可用，请稍后重试。',
+      );
+    }
 
     const payload = (await response.json().catch(() => undefined)) as
       ChatCompletionResponse | undefined;
 
     if (!response.ok) {
-      throw new Error(
-        payload?.error?.message
-          ? `AI 请求失败：${payload.error.message}`
-          : `AI 请求失败（HTTP ${response.status}）`,
-      );
+      if (!mapErrorsForApi) {
+        throw new Error(
+          payload?.error?.message
+            ? `AI 请求失败：${payload.error.message}`
+            : `AI 请求失败（HTTP ${response.status}）`,
+        );
+      }
+
+      const message = 'AI 服务请求失败，请稍后重试。';
+
+      if (response.status === 401 || response.status === 403) {
+        throw new AiAnalysisError(
+          401,
+          'AI_API_KEY_REJECTED',
+          'AI API Key 无效或被拒绝。',
+        );
+      }
+
+      if (response.status === 429) {
+        throw new AiAnalysisError(
+          429,
+          'AI_RATE_LIMITED',
+          'AI 请求过于频繁，请稍后重试。',
+        );
+      }
+
+      throw new AiAnalysisError(502, 'AI_UPSTREAM_ERROR', message);
     }
 
     const content = payload?.choices?.[0]?.message?.content?.trim();
@@ -236,7 +328,50 @@ export class AiService {
       throw new Error('AI 返回了空内容');
     }
 
-    return this.parseAnalysis(content);
+    try {
+      return this.parseAnalysis(content);
+    } catch (error) {
+      if (!mapErrorsForApi) {
+        throw error;
+      }
+
+      throw new AiAnalysisError(
+        422,
+        'INVALID_AI_OUTPUT',
+        'AI 返回的数据格式不正确，请重试。',
+      );
+    }
+  }
+
+  private assertAllowedAiBaseUrl(baseUrl: string) {
+    let normalizedBaseUrl: string;
+
+    try {
+      const url = new URL(baseUrl);
+      if (url.protocol !== 'https:') {
+        throw new Error('AI 服务地址必须使用 HTTPS。');
+      }
+      normalizedBaseUrl = url.toString().replace(/\/$/, '');
+    } catch (error) {
+      if (error instanceof Error && error.message === 'AI 服务地址必须使用 HTTPS。') {
+        throw error;
+      }
+      throw new BadRequestException('AI 服务地址格式不正确。');
+    }
+
+    const allowedBaseUrls = [
+      DEFAULT_AI_BASE_URL,
+      process.env.AI_BASE_URL,
+      ...(process.env.AI_ALLOWED_BASE_URLS?.split(',') ?? []),
+    ]
+      .map((value) => value?.trim().replace(/\/$/, ''))
+      .filter((value): value is string => Boolean(value));
+
+    if (!allowedBaseUrls.includes(normalizedBaseUrl)) {
+      throw new BadRequestException(
+        '当前 AI 服务地址未被服务器允许，请联系部署者配置白名单。',
+      );
+    }
   }
 
   private parseAnalysis(content: string): MemeAnalysis {

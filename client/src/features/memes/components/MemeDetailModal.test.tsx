@@ -81,26 +81,20 @@ describe('MemeDetailModal', () => {
     })
   })
 
-  it('opens the local image location', async () => {
-    const user = userEvent.setup()
-    const onOpenLocation = vi.fn().mockResolvedValue(undefined)
-
+  it('does not show server-only location actions for local media URLs', () => {
     render(
       <MemeDetailModal
-        meme={meme}
+        meme={{ ...meme, imageUrl: 'blob:local-meme' }}
         open
         onClose={vi.fn()}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
-        onOpenLocation={onOpenLocation}
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: '打开文件所在位置' }))
-
-    await waitFor(() => {
-      expect(onOpenLocation).toHaveBeenCalledWith(meme)
-    })
+    expect(
+      screen.queryByRole('button', { name: /打开文件所在位置/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows the AI analysis failure state and error message', () => {
@@ -123,7 +117,7 @@ describe('MemeDetailModal', () => {
   })
 
   it('renders a video player with its first-frame poster and metadata', () => {
-    const { container } = render(
+    render(
       <MemeDetailModal
         meme={{
           ...meme,
@@ -140,7 +134,7 @@ describe('MemeDetailModal', () => {
       />,
     )
 
-    const video = container.querySelector('video')
+    const video = document.querySelector('video')
 
     expect(video).toBeInTheDocument()
     expect(video).toHaveAttribute(

@@ -20,4 +20,5 @@ declare module 'multer' {
   };
 
   export function diskStorage(options: DiskStorageOptions): unknown;
+  export function memoryStorage(): unknown;
 }

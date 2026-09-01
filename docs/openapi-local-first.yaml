@@ -1,0 +1,383 @@
+openapi: 3.1.0
+
+info:
+  title: MemeSeek Local-first API
+  version: 1.0.0
+  summary: MemeSeek 本地文件夹模式所需的最小云端 API
+  description: |
+    本规范只定义 MemeSeek 本地文件夹模式仍然需要调用的云端能力。
+
+    梗图文件、封面和 `.memeseek/index.json` 均保存在用户授权的本地目录中；
+    目录选择、权限恢复、扫描、列表、搜索、编辑和删除由浏览器中的
+    File System Access API 与 IndexedDB 完成，因此不属于 HTTP API。
+
+    服务端只接收 AI 分析所需的一次性图片内容。请求完成或失败后，服务端都不得
+    永久保存文件、文件内容、AI API Key 或梗图元数据。
+
+    本 API 不提供注册、登录、多用户账号、远程素材 CRUD、云端同步或云存储接口。
+  contact:
+    name: MemeSeek
+  license:
+    name: Private project
+
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
+servers:
+  - url: http://localhost:3000
+    description: 本地开发环境
+  - url: https://api.example.com
+    description: CloudBase 云托管生产环境，占位域名
+
+tags:
+  - name: System
+    description: 服务状态检查
+  - name: AI
+    description: 不持久化媒体文件的临时 AI 分析
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      operationId: getHealth
+      summary: 检查服务健康状态
+      description: |
+        供 CloudBase 健康检查和前端诊断使用。该接口不检查或暴露用户的本地文件夹。
+      security: []
+      responses:
+        "200":
+          description: 服务运行正常
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/ai/analyze:
+    post:
+      tags:
+        - AI
+      operationId: analyzeLocalMedia
+      summary: 临时分析本地梗图或媒体首帧
+      description: |
+        接收浏览器从本地素材库读取的一张图片，并返回可写入本地索引的分析结果。
+
+        静态图片可以直接提交；GIF、WebP 动图和视频必须由浏览器先生成 JPEG 首帧封面，
+        再将封面作为 `file` 提交。不得将完整视频发送到该接口。
+
+        `x-ai-api-key` 是用户在当前浏览器中配置的上游 AI 服务密钥，只能用于当前请求，
+        服务端不得记录、持久化或在错误响应中回显该密钥。
+
+        服务端可以在内存或临时目录中处理文件，但必须在请求成功、失败或超时后清理。
+      security:
+        - AiProviderKey: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        description: 待分析图片和可选分析上下文
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/AnalyzeMediaRequest"
+            encoding:
+              file:
+                contentType: image/jpeg, image/png, image/webp
+              recommendedTags:
+                style: form
+                explode: true
+      responses:
+        "200":
+          description: 分析成功；响应内容由前端写入本地 `.memeseek/index.json`
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeMediaResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/MissingAiKey"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/InvalidAiOutput"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "502":
+          $ref: "#/components/responses/AiUpstreamError"
+        "504":
+          $ref: "#/components/responses/AiTimeout"
+
+components:
+  securitySchemes:
+    AiProviderKey:
+      type: apiKey
+      in: header
+      name: x-ai-api-key
+      description: |
+        用户自己的上游 AI API Key。它不是 MemeSeek 登录凭据，只允许服务端在当前
+        AI 分析请求中使用，禁止写入日志、数据库、文件或错误响应。
+
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: |
+        可选的请求追踪 ID。未提供时由服务端生成，并通过响应头返回。
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+
+  headers:
+    RequestId:
+      description: 请求追踪 ID，不得包含 AI API Key 或用户文件内容。
+      schema:
+        type: string
+
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - service
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          const: ok
+        service:
+          type: string
+          const: memeseek-api
+        version:
+          type: string
+          description: 当前部署版本
+        timestamp:
+          type: string
+          format: date-time
+
+    AnalyzeMediaRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+        - sourceMediaType
+      properties:
+        file:
+          type: string
+          format: binary
+          description: |
+            静态 JPG、PNG、WebP 图片，或者浏览器为视频/动图生成的 JPEG 首帧封面。
+            最大 10 MiB。服务端不得永久保存该文件。
+        sourceMediaType:
+          $ref: "#/components/schemas/AnalysisSourceMediaType"
+        currentTitle:
+          type: string
+          maxLength: 200
+          default: ""
+          description: 当前本地索引中已有的标题，可作为分析上下文。
+        currentDescription:
+          type: string
+          maxLength: 2000
+          default: ""
+          description: 当前本地索引中已有的描述，可作为分析上下文。
+        recommendedTags:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          description: 用户已有或希望模型优先考虑的标签；multipart 中使用重复字段传递。
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+        baseUrl:
+          type: string
+          format: uri
+          maxLength: 500
+          description: |
+            可选的 OpenAI 兼容 API 基础地址。服务端必须只允许 HTTPS，并使用服务端
+            白名单校验主机名，禁止直接请求任意用户地址，避免 SSRF。
+        model:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 可选模型名称；未提供时使用服务端默认模型。
+
+    AnalysisSourceMediaType:
+      type: string
+      description: |
+        原始本地素材类型。`VIDEO_FIRST_FRAME` 和 `ANIMATED_IMAGE_FIRST_FRAME`
+        表示提交的 `file` 已经是浏览器生成的 JPEG 首帧，而不是原始媒体。
+      enum:
+        - IMAGE
+        - VIDEO_FIRST_FRAME
+        - ANIMATED_IMAGE_FIRST_FRAME
+
+    AnalyzeMediaResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - description
+        - tags
+        - ocrText
+      properties:
+        title:
+          type: string
+          maxLength: 200
+          description: 简短、准确的中文标题。
+        description:
+          type: string
+          maxLength: 2000
+          description: 画面、情绪和适用语境描述。
+        tags:
+          type: array
+          maxItems: 8
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+        ocrText:
+          type: string
+          maxLength: 10000
+          description: 画面中识别到的文字；没有文字时返回空字符串。
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - statusCode
+        - code
+        - message
+        - requestId
+      properties:
+        statusCode:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          type: string
+          description: 稳定的机器可读错误码。
+        message:
+          type: string
+          description: 可展示给用户的中文错误信息，不得包含密钥或文件内容。
+        requestId:
+          type: string
+        details:
+          type:
+            - object
+            - "null"
+          description: 可选的字段级校验信息。
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: 请求字段缺失、格式错误，或者 `baseUrl` 未通过安全校验
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    MissingAiKey:
+      description: 未提供 AI API Key，或者上游服务拒绝该密钥
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    PayloadTooLarge:
+      description: 临时分析图片超过 10 MiB
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    UnsupportedMediaType:
+      description: 文件内容不是受支持的静态图片或 JPEG 首帧
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InvalidAiOutput:
+      description: 上游模型返回成功，但输出无法转换为约定的分析结构
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    TooManyRequests:
+      description: AI 接口调用过于频繁，或者上游模型触发限流
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+        Retry-After:
+          description: 建议等待秒数
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    AiUpstreamError:
+      description: 上游 AI 服务调用失败
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    AiTimeout:
+      description: 上游 AI 服务在规定时间内没有完成响应
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+x-local-first-contract:
+  localOnlyCapabilities:
+    - directory-selection
+    - permission-restoration
+    - media-scan
+    - media-import
+    - local-preview
+    - metadata-crud
+    - local-search
+    - local-delete
+  persistentServerData: false
+  persistentMediaUpload: false
+  userAccounts: false
+  cloudSync: false

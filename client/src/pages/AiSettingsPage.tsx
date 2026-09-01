@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Input, message, Switch, Tag } from 'antd'
+import { Alert, Button, Input, message, Switch, Tag } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { defaultAiSettings } from '../mocks/ai-settings'
 import {
@@ -172,6 +172,13 @@ function AiSettingsPage() {
             modelPlaceholder="例如 gpt-4o"
             modelHelp="模型需要支持图片输入；默认使用 gpt-4o。"
             onChange={(analysis) => updateSettings({ analysis })}
+          />
+
+          <Alert
+            type="info"
+            showIcon
+            message="DeepSeek Vision 可以用于图片分析"
+            description="如使用 DeepSeek 官方 API，请将分析模型填写为 deepseek-v4-flash-vision-exp，接口地址填写为 https://api.deepseek.com。该实验性视觉模型支持图片理解和 OCR。其他不带 Vision 的 DeepSeek 模型仍不能用于梗图图片分析。"
           />
 
           <AiProviderCard

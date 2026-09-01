@@ -33,7 +33,7 @@ describe('ai-settings-storage', () => {
     expect(settings.analysis).toEqual({
       baseUrl: 'https://api.openai.com/v1',
       apiKey: 'legacy-key',
-      model: 'gpt-4o',
+      model: 'qwen3-vl-plus',
     })
     expect(settings.content.apiKey).toBe('')
     expect(settings.recommendedTags).toEqual(['猫'])

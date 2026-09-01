@@ -132,6 +132,44 @@ describe('AiService', () => {
     expect(timeoutSpy).toHaveBeenCalledWith(120_000);
   });
 
+  it('analyzes an in-memory local image without reading or writing persistent storage', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  title: '本地图片',
+                  description: '只在内存中分析。',
+                  tags: ['本地'],
+                  ocrText: '',
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const result = await service.analyzeLocalImage({
+      buffer: Buffer.from([0xff, 0xd8, 0xff]),
+      mimeType: 'image/jpeg',
+      sourceMediaType: 'IMAGE' as never,
+      title: '',
+      description: '',
+      apiKey: 'test-key',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({ title: '本地图片', tags: ['本地'] }),
+    );
+    expect(prisma.meme.findUnique).not.toHaveBeenCalled();
+    expect(prisma.meme.update).not.toHaveBeenCalled();
+    expect(storage.readMemeImage).not.toHaveBeenCalled();
+  });
+
   it('retries one network failure and logs its underlying cause', async () => {
     const connectionError = Object.assign(
       new Error('connect ETIMEDOUT 203.0.113.10:443'),
