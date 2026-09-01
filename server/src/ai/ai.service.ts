@@ -15,9 +15,9 @@ import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
 import { LocalAnalysisSourceMediaType } from './dto/analyze-local-media.dto';
 import { AiAnalysisError } from './ai-analysis.error';
 
-// 默认使用 OpenAI 视觉模型，也可以通过 AI_MODEL 切换模型。
-export const DEFAULT_AI_MODEL = 'gpt-4o';
-const DEFAULT_AI_BASE_URL = 'https://api.openai.com/v1';
+// CloudBase production uses the official DeepSeek vision API exclusively.
+export const DEFAULT_AI_MODEL = 'deepseek-v4-flash-vision-exp';
+const DEFAULT_AI_BASE_URL = 'https://api.deepseek.com';
 
 const AI_REQUEST_TIMEOUT_MS = 120_000;
 const AI_NETWORK_MAX_ATTEMPTS = 2;
@@ -214,20 +214,23 @@ export class AiService {
     options: AiRequestOptions,
     mapErrorsForApi = false,
   ): Promise<MemeAnalysis> {
-    const configuredBaseUrl =
-      options.baseUrl?.trim() || process.env.AI_BASE_URL || DEFAULT_AI_BASE_URL;
+    const deepSeekOnly = process.env.DEEPSEEK_ONLY === 'true';
+    const configuredBaseUrl = deepSeekOnly
+      ? DEFAULT_AI_BASE_URL
+      : options.baseUrl?.trim() || process.env.AI_BASE_URL || DEFAULT_AI_BASE_URL;
     const baseUrl = configuredBaseUrl?.replace(/\/$/, '');
 
     if (!baseUrl) {
       throw new Error(
-        '未配置 AI_BASE_URL。请配置支持图片输入的 OpenAI 兼容模型接口。',
+        '未配置 DeepSeek 服务地址。',
       );
     }
 
     this.assertAllowedAiBaseUrl(baseUrl);
 
-    const model =
-      options.model?.trim() || process.env.AI_MODEL || DEFAULT_AI_MODEL;
+    const model = deepSeekOnly
+      ? DEFAULT_AI_MODEL
+      : options.model?.trim() || process.env.AI_MODEL || DEFAULT_AI_MODEL;
     const recommendedTags =
       options.recommendedTags?.filter(Boolean).join('、') || '无';
     const isAnimatedImage =
@@ -286,7 +289,7 @@ export class AiService {
       throw new AiAnalysisError(
         502,
         'AI_UPSTREAM_ERROR',
-        'AI 服务暂时不可用，请稍后重试。',
+        '暂时无法连接 DeepSeek，请稍后重试。',
       );
     }
 
@@ -302,13 +305,11 @@ export class AiService {
         );
       }
 
-      const message = 'AI 服务请求失败，请稍后重试。';
-
       if (response.status === 401 || response.status === 403) {
         throw new AiAnalysisError(
           401,
           'AI_API_KEY_REJECTED',
-          'AI API Key 无效或被拒绝。',
+          'DeepSeek API Key 无效或被拒绝，请检查后重新填写。',
         );
       }
 
@@ -320,7 +321,11 @@ export class AiService {
         );
       }
 
-      throw new AiAnalysisError(502, 'AI_UPSTREAM_ERROR', message);
+      throw new AiAnalysisError(
+        502,
+        'AI_UPSTREAM_ERROR',
+        'DeepSeek 服务请求失败，请稍后重试。',
+      );
     }
 
     const content = payload?.choices?.[0]?.message?.content?.trim();

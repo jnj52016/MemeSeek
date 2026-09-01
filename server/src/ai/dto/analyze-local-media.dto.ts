@@ -32,13 +32,13 @@ export class AnalyzeLocalMediaDto {
   @MaxLength(2000)
   currentDescription?: string;
 
-  @ApiPropertyOptional({ example: 'https://api.openai.com/v1' })
+  @ApiPropertyOptional({ example: 'https://api.deepseek.com' })
   @IsOptional()
   @IsUrl({ protocols: ['https'], require_protocol: true })
   @MaxLength(500)
   baseUrl?: string;
 
-  @ApiPropertyOptional({ example: 'gpt-4o' })
+  @ApiPropertyOptional({ example: 'deepseek-v4-flash-vision-exp' })
   @IsOptional()
   @IsString()
   @MaxLength(100)

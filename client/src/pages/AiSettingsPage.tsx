@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, Input, message, Switch, Tag } from 'antd'
+import { Alert, Button, Input, message, Tag } from 'antd'
 import AppLayout from '../components/AppLayout'
 import { defaultAiSettings } from '../mocks/ai-settings'
 import {
@@ -12,66 +12,51 @@ import type {
 } from '../types/ai-settings'
 
 type AiProviderCardProps = {
-  idPrefix: string
-  title: string
-  description: string
   settings: AiProviderSettings
-  modelPlaceholder: string
-  modelHelp: string
-  disabled?: boolean
   onChange: (settings: AiProviderSettings) => void
 }
 
 function AiProviderCard({
-  idPrefix,
-  title,
-  description,
   settings,
-  modelPlaceholder,
-  modelHelp,
-  disabled = false,
   onChange,
 }: AiProviderCardProps) {
   return (
     <section className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
-      </div>
-
-      <div>
-        <label
-          className="mb-2 block text-sm font-medium text-slate-700"
-          htmlFor={`${idPrefix}-base-url`}
-        >
-          API 地址
-        </label>
-        <Input
-          id={`${idPrefix}-base-url`}
-          value={settings.baseUrl}
-          disabled={disabled}
-          placeholder="例如 https://api.openai.com/v1"
-          onChange={(event) =>
-            onChange({ ...settings, baseUrl: event.target.value })
-          }
-        />
-        <p className="mt-2 text-sm text-slate-500">
-          填写 OpenAI 兼容接口的 Base URL，不要包含 /chat/completions。
+        <h2 className="text-lg font-semibold text-slate-900">DeepSeek 图片分析</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          负责识别梗图、OCR，并生成标题、描述和标签。
         </p>
       </div>
 
       <div>
         <label
           className="mb-2 block text-sm font-medium text-slate-700"
-          htmlFor={`${idPrefix}-api-key`}
+          htmlFor="deepseek-base-url"
         >
-          OpenAI API Key
+          API 地址
+        </label>
+        <Input
+          id="deepseek-base-url"
+          value={settings.baseUrl}
+          disabled
+        />
+        <p className="mt-2 text-sm text-slate-500">
+          已固定为 DeepSeek 官方 API，无需修改。
+        </p>
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-sm font-medium text-slate-700"
+          htmlFor="deepseek-api-key"
+        >
+          DeepSeek API Key
         </label>
         <Input.Password
-          id={`${idPrefix}-api-key`}
+          id="deepseek-api-key"
           value={settings.apiKey}
-          disabled={disabled}
-          placeholder="请输入 OpenAI API Key"
+          placeholder="请输入在 DeepSeek 开放平台创建的 API Key"
           onChange={(event) =>
             onChange({ ...settings, apiKey: event.target.value })
           }
@@ -81,20 +66,18 @@ function AiProviderCard({
       <div>
         <label
           className="mb-2 block text-sm font-medium text-slate-700"
-          htmlFor={`${idPrefix}-model`}
+          htmlFor="deepseek-model"
         >
           模型名称
         </label>
         <Input
-          id={`${idPrefix}-model`}
+          id="deepseek-model"
           value={settings.model}
-          disabled={disabled}
-          placeholder={modelPlaceholder}
-          onChange={(event) =>
-            onChange({ ...settings, model: event.target.value })
-          }
+          disabled
         />
-        <p className="mt-2 text-sm text-slate-500">{modelHelp}</p>
+        <p className="mt-2 text-sm text-slate-500">
+          已固定为 DeepSeek 官方图片理解模型。
+        </p>
       </div>
     </section>
   )
@@ -140,8 +123,21 @@ function AiSettingsPage() {
   }
 
   const handleSave = () => {
-    saveAiSettings(settings)
-    message.success('AI 设置已保存')
+    const deepSeekSettings = {
+      ...settings,
+      analysis: {
+        ...defaultAiSettings.analysis,
+        apiKey: settings.analysis.apiKey.trim(),
+      },
+      content: {
+        ...defaultAiSettings.content,
+        apiKey: settings.analysis.apiKey.trim(),
+      },
+      useAnalysisForContent: true,
+    }
+    setSettings(deepSeekSettings)
+    saveAiSettings(deepSeekSettings)
+    message.success('DeepSeek 设置已保存')
   }
 
   const handleReset = () => {
@@ -159,57 +155,22 @@ function AiSettingsPage() {
             AI 设置
           </h1>
           <p className="mt-2 text-slate-500">
-            分别配置图片分析和内容生成使用的 OpenAI 模型。API Key 只保存在当前浏览器中。
+            MemeSeek 仅使用 DeepSeek 官方图片模型。你只需要填写 DeepSeek API Key，密钥只保存在当前浏览器中。
           </p>
         </div>
 
         <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AiProviderCard
-            title="分析 AI"
-            description="负责识别梗图、OCR，并生成标题、描述和标签。当前上传和重新分析流程使用此配置。"
-            idPrefix="analysis-ai"
             settings={settings.analysis}
-            modelPlaceholder="例如 gpt-4o"
-            modelHelp="模型需要支持图片输入；默认使用 gpt-4o。"
             onChange={(analysis) => updateSettings({ analysis })}
           />
 
           <Alert
             type="info"
             showIcon
-            message="DeepSeek Vision 可以用于图片分析"
-            description="如使用 DeepSeek 官方 API，请将分析模型填写为 deepseek-v4-flash-vision-exp，接口地址填写为 https://api.deepseek.com。该实验性视觉模型支持图片理解和 OCR。其他不带 Vision 的 DeepSeek 模型仍不能用于梗图图片分析。"
+            message="这里只能使用 DeepSeek"
+            description="API 地址和视觉模型已经自动配置。旧的 OpenAI、Modcon 或其他服务设置会被清除，请填写 DeepSeek 开放平台创建的 API Key。"
           />
-
-          <AiProviderCard
-            title="内容 AI"
-            description="预留给文案改写、自然语言搜索和批量内容生成等文本功能。"
-            idPrefix="content-ai"
-            settings={settings.content}
-            modelPlaceholder="例如 gpt-4o-mini"
-            modelHelp="当前版本尚未调用内容 AI；配置会保存在本地，供后续功能使用。"
-            disabled={settings.useAnalysisForContent}
-            onChange={(content) => updateSettings({ content })}
-          />
-
-          <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-medium text-slate-800">
-                  内容 AI 使用分析 AI 配置
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  适合分析和内容生成使用同一个 OpenAI 账号时开启。
-                </p>
-              </div>
-              <Switch
-                checked={settings.useAnalysisForContent}
-                onChange={(useAnalysisForContent) =>
-                  updateSettings({ useAnalysisForContent })
-                }
-              />
-            </div>
-          </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-slate-700">推荐标签</p>
@@ -239,7 +200,7 @@ function AiSettingsPage() {
             <div>
               <p className="text-sm font-medium text-slate-700">本地设置</p>
               <p className="mt-1 text-sm text-slate-500">
-                两套配置都会保存到浏览器 localStorage，不会写入数据库。
+                DeepSeek API Key 保存在浏览器 localStorage，不会写入服务器数据库。
               </p>
             </div>
 

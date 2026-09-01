@@ -28,16 +28,15 @@ function normalizeProviderSettings(
   const record = isRecord(value) ? value : {}
   const baseUrl = typeof record.baseUrl === 'string' ? record.baseUrl.trim() : ''
   const model = typeof record.model === 'string' ? record.model.trim() : ''
-  const apiKey = typeof record.apiKey === 'string' ? record.apiKey : ''
+  const isDeepSeekSetting =
+    /^https:\/\/api\.deepseek\.com\/?$/i.test(baseUrl) &&
+    model === fallback.model
+  const apiKey =
+    isDeepSeekSetting && typeof record.apiKey === 'string' ? record.apiKey : ''
 
   return {
-    baseUrl: baseUrl || fallback.baseUrl,
-    // Do not keep models from the previous Qwen setup. DeepSeek now has a
-    // vision-capable model and must remain selectable.
-    model:
-      !model || /^qwen([_-]|$)/i.test(model)
-        ? fallback.model
-        : model,
+    baseUrl: fallback.baseUrl,
+    model: fallback.model,
     apiKey,
   }
 }
@@ -102,9 +101,15 @@ export function saveAiSettings(settings: AiSettings) {
   window.localStorage.setItem(
     AI_SETTINGS_STORAGE_KEY,
     JSON.stringify({
-      analysis: settings.analysis,
-      content: settings.content,
-      useAnalysisForContent: settings.useAnalysisForContent,
+      analysis: {
+        ...defaultAiSettings.analysis,
+        apiKey: settings.analysis.apiKey,
+      },
+      content: {
+        ...defaultAiSettings.content,
+        apiKey: settings.analysis.apiKey,
+      },
+      useAnalysisForContent: true,
       recommendedTags: settings.recommendedTags,
     }),
   )

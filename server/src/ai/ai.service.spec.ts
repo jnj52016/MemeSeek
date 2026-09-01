@@ -47,6 +47,9 @@ describe('AiService', () => {
 
   afterEach(() => {
     delete process.env.AI_BASE_URL;
+    delete process.env.DEEPSEEK_ONLY;
+    delete process.env.AI_ALLOW_ANY_BASE_URL;
+    delete process.env.AI_ALLOWED_BASE_URLS;
     jest.restoreAllMocks();
   });
 
@@ -168,6 +171,65 @@ describe('AiService', () => {
     expect(prisma.meme.findUnique).not.toHaveBeenCalled();
     expect(prisma.meme.update).not.toHaveBeenCalled();
     expect(storage.readMemeImage).not.toHaveBeenCalled();
+  });
+
+  it('forces the official DeepSeek vision endpoint in DeepSeek-only mode', async () => {
+    process.env.DEEPSEEK_ONLY = 'true';
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  title: 'DeepSeek 服务',
+                  description: '使用官方 DeepSeek Vision。',
+                  tags: ['DeepSeek'],
+                  ocrText: '',
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await service.analyzeLocalImage({
+      buffer: Buffer.from([0xff, 0xd8, 0xff]),
+      mimeType: 'image/jpeg',
+      sourceMediaType: 'IMAGE' as never,
+      title: '',
+      description: '',
+      apiKey: 'test-key',
+      baseUrl: 'https://another-ai.example/v1',
+      model: 'another-model',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.deepseek.com/chat/completions',
+      expect.any(Object),
+    );
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const requestBody = JSON.parse(String(requestInit.body));
+    expect(requestBody.model).toBe('deepseek-v4-flash-vision-exp');
+  });
+
+  it('rejects an insecure HTTP endpoint outside DeepSeek-only mode', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch');
+
+    await expect(
+      service.analyzeLocalImage({
+        buffer: Buffer.from([0xff, 0xd8, 0xff]),
+        mimeType: 'image/jpeg',
+        sourceMediaType: 'IMAGE' as never,
+        title: '',
+        description: '',
+        apiKey: 'test-key',
+        baseUrl: 'http://insecure-ai.example/v1',
+      }),
+    ).rejects.toThrow('AI 服务地址必须使用 HTTPS。');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('retries one network failure and logs its underlying cause', async () => {

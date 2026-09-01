@@ -1,14 +1,17 @@
 import type { AiSettings } from '../types/ai-settings'
 
+export const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
+export const DEEPSEEK_VISION_MODEL = 'deepseek-v4-flash-vision-exp'
+
 export const defaultAiSettings: AiSettings = {
   analysis: {
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o',
+    baseUrl: DEEPSEEK_BASE_URL,
+    model: DEEPSEEK_VISION_MODEL,
     apiKey: '',
   },
   content: {
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
+    baseUrl: DEEPSEEK_BASE_URL,
+    model: DEEPSEEK_VISION_MODEL,
     apiKey: '',
   },
   useAnalysisForContent: true,

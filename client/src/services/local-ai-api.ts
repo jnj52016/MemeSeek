@@ -31,7 +31,7 @@ export async function analyzeLocalMedia(
   input: AnalyzeLocalMediaInput,
 ): Promise<LocalAiAnalysis> {
   if (!input.apiKey.trim()) {
-    throw new Error('请先在 AI 设置中填写 API Key。')
+    throw new Error('请先在 AI 设置中填写 DeepSeek API Key。')
   }
 
   const body = new FormData()

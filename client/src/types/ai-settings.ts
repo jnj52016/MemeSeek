@@ -1,6 +1,6 @@
 /** AI provider settings kept locally for this personal application. */
 export type AiProviderSettings = {
-  /** OpenAI-compatible base URL, without /chat/completions. */
+  /** DeepSeek base URL, without /chat/completions. */
   baseUrl: string
   model: string
   apiKey: string

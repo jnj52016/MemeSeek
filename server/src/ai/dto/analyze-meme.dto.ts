@@ -9,13 +9,13 @@ import {
 } from 'class-validator';
 
 export class AnalyzeMemeDto {
-  @ApiPropertyOptional({ example: 'https://api.openai.com/v1' })
+  @ApiPropertyOptional({ example: 'https://api.deepseek.com' })
   @IsOptional()
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   @MaxLength(500)
   baseUrl?: string;
 
-  @ApiPropertyOptional({ example: 'gpt-4o' })
+  @ApiPropertyOptional({ example: 'deepseek-v4-flash-vision-exp' })
   @IsOptional()
   @IsString()
   @MaxLength(100)

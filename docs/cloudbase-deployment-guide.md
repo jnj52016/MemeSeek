@@ -81,6 +81,8 @@ tcb app deploy --cwd .\client --framework vite -e <环境ID>
 
 CloudBase 应用专属测试域名不适合使用环境级 404 回退规则，容易与应用路由形成重定向循环。本项目线上使用 React Hash Router，因此 AI 设置页地址形如 `/#/ai-settings`，刷新子页面不需要配置静态托管错误页。请勿再添加“404 → index.html”规则。
 
+若同一个 CloudBase 环境还托管其他网站，不同应用必须使用不同部署路径。本项目使用 `/memeseek`，避免覆盖该环境中部署在 `/` 的个人博客；Vite 使用相对资源路径以同时兼容应用专属域名和环境静态托管子路径。
+
 部署后，使用 CloudBase 默认 HTTPS 域名打开首页，确认浏览器能弹出“选择梗图文件夹”。再绑定正式自定义域名。
 
 ## 4. 第二阶段：部署 AI 临时分析后端
@@ -115,11 +117,11 @@ CloudBase 应用专属测试域名不适合使用环境级 404 回退规则，�
 | `PORT` | `3000` | 应用监听端口。 |
 | `LOCAL_AI_ONLY` | `true` | 必填。只启用无状态的本地媒体分析接口，不连接 PostgreSQL。Dockerfile 已设置默认值，控制台显式填写可避免误覆盖。 |
 | `CLIENT_ORIGIN` | `https://memeseek.example.com` | 前端正式域名，用于 CORS。测试域名与正式域名不同需分别部署或更新此值。 |
-| `AI_BASE_URL` | `https://api.openai.com/v1` | 默认 OpenAI 兼容地址。 |
-| `AI_MODEL` | `gpt-4o` | 默认视觉模型。 |
-| `AI_ALLOWED_BASE_URLS` | `https://api.deepseek.com,https://api.openai.com/v1` | 用户可填写的 AI 服务地址白名单，逗号分隔。 |
+| `AI_BASE_URL` | `https://api.deepseek.com` | DeepSeek 官方 API 地址。 |
+| `AI_MODEL` | `deepseek-v4-flash-vision-exp` | DeepSeek 官方图片理解模型。 |
+| `DEEPSEEK_ONLY` | `true` | 强制忽略客户端传入的其他地址和模型，仅调用 DeepSeek 官方视觉服务。 |
 
-若希望支持 DeepSeek Vision，需要将 `https://api.deepseek.com` 放入 `AI_ALLOWED_BASE_URLS`，并让用户在网页 AI 设置中填写模型 `deepseek-v4-flash-vision-exp`。
+当前正式部署仅支持 DeepSeek。网页会固定 API 地址和视觉模型，用户只需填写自己的 DeepSeek API Key；旧的其他服务配置会被自动清除。
 
 不要在云托管环境变量中保存用户的 AI Key；该 Key 仅随单次 `POST /v1/ai/analyze` 请求转发。
 

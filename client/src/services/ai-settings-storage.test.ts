@@ -9,16 +9,16 @@ describe('ai-settings-storage', () => {
     window.localStorage.clear()
   })
 
-  it('returns separate OpenAI analysis and content defaults', () => {
+  it('returns fixed DeepSeek analysis defaults', () => {
     const settings = loadAiSettings()
 
-    expect(settings.analysis.baseUrl).toBe('https://api.openai.com/v1')
-    expect(settings.analysis.model).toBe('gpt-4o')
-    expect(settings.content.model).toBe('gpt-4o-mini')
+    expect(settings.analysis.baseUrl).toBe('https://api.deepseek.com')
+    expect(settings.analysis.model).toBe('deepseek-v4-flash-vision-exp')
+    expect(settings.content.model).toBe('deepseek-v4-flash-vision-exp')
     expect(settings.useAnalysisForContent).toBe(true)
   })
 
-  it('migrates the legacy single AI setting to analysis settings', () => {
+  it('clears an incompatible legacy provider and API key', () => {
     window.localStorage.setItem(
       'memeseek-ai-settings',
       JSON.stringify({
@@ -31,15 +31,15 @@ describe('ai-settings-storage', () => {
     const settings = loadAiSettings()
 
     expect(settings.analysis).toEqual({
-      baseUrl: 'https://api.openai.com/v1',
-      apiKey: 'legacy-key',
-      model: 'qwen3-vl-plus',
+      baseUrl: 'https://api.deepseek.com',
+      apiKey: '',
+      model: 'deepseek-v4-flash-vision-exp',
     })
     expect(settings.content.apiKey).toBe('')
     expect(settings.recommendedTags).toEqual(['猫'])
   })
 
-  it('saves both provider settings', () => {
+  it('saves only the fixed DeepSeek provider and analysis key', () => {
     saveAiSettings({
       analysis: {
         baseUrl: 'https://proxy.example/v1',
@@ -57,16 +57,16 @@ describe('ai-settings-storage', () => {
 
     expect(loadAiSettings()).toEqual({
       analysis: {
-        baseUrl: 'https://proxy.example/v1',
+        baseUrl: 'https://api.deepseek.com',
         apiKey: 'analysis-key',
-        model: 'gpt-4o',
+        model: 'deepseek-v4-flash-vision-exp',
       },
       content: {
-        baseUrl: 'https://proxy.example/v1',
-        apiKey: 'content-key',
-        model: 'gpt-4o-mini',
+        baseUrl: 'https://api.deepseek.com',
+        apiKey: 'analysis-key',
+        model: 'deepseek-v4-flash-vision-exp',
       },
-      useAnalysisForContent: false,
+      useAnalysisForContent: true,
       recommendedTags: ['tag'],
     })
   })

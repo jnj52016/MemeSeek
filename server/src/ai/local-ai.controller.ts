@@ -88,7 +88,7 @@ export class LocalAiController {
       throw new AiAnalysisError(
         HttpStatus.UNAUTHORIZED,
         'AI_API_KEY_REQUIRED',
-        '请先配置有效的 AI API Key。',
+        '请先填写有效的 DeepSeek API Key。',
       );
     }
 
