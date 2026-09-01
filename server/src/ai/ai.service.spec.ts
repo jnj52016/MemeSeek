@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { MemeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -50,6 +51,7 @@ describe('AiService', () => {
   });
 
   it('saves validated AI JSON as completed meme metadata', async () => {
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -123,9 +125,94 @@ describe('AiService', () => {
       expect.arrayContaining([
         {
           type: 'image_url',
-          image_url: { url: 'data:image/png;base64,ZmFrZSBpbW1hZ2U=' },
+          image_url: { url: 'data:image/png;base64,ZmFrZSBpbWFnZQ==' },
         },
       ]),
+    );
+    expect(timeoutSpy).toHaveBeenCalledWith(120_000);
+  });
+
+  it('retries one network failure and logs its underlying cause', async () => {
+    const connectionError = Object.assign(
+      new Error('connect ETIMEDOUT 203.0.113.10:443'),
+      {
+        code: 'ETIMEDOUT',
+        syscall: 'connect',
+        address: '203.0.113.10',
+        port: 443,
+      },
+    );
+    const networkError = new TypeError('fetch failed', {
+      cause: connectionError,
+    });
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    const warnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockRejectedValueOnce(networkError)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    title: '网络重试成功',
+                    description: '第一次连接超时，第二次成功。',
+                    tags: ['重试'],
+                    ocrText: '',
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const result = await service.analyzeMeme('meme-1', {
+      apiKey: 'test-key',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: MemeStatus.COMPLETED,
+        title: '网络重试成功',
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(timeoutSpy).toHaveBeenCalledTimes(2);
+    expect(timeoutSpy).toHaveBeenNthCalledWith(1, 120_000);
+    expect(timeoutSpy).toHaveBeenNthCalledWith(2, 120_000);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('ETIMEDOUT connect 203.0.113.10:443'),
+    );
+  });
+
+  it('persists network diagnostics after the retry also fails', async () => {
+    const connectionError = Object.assign(new Error('socket reset'), {
+      code: 'ECONNRESET',
+      syscall: 'read',
+      address: '203.0.113.20',
+      port: 443,
+    });
+    const networkError = new TypeError('fetch failed', {
+      cause: connectionError,
+    });
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockRejectedValue(networkError);
+
+    const result = await service.analyzeMeme('meme-1', {
+      apiKey: 'test-key',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.status).toBe(MemeStatus.FAILED);
+    expect(result.errorMessage).toContain(
+      'fetch failed (ECONNRESET read 203.0.113.20:443)',
     );
   });
 

@@ -15,6 +15,23 @@ import type { AnalyzeMemeDto } from './dto/analyze-meme.dto';
 // 默认使用 OpenAI 视觉模型，也可以通过 AI_MODEL 切换模型。
 export const DEFAULT_AI_MODEL = 'gpt-4o';
 
+const AI_REQUEST_TIMEOUT_MS = 120_000;
+const AI_NETWORK_MAX_ATTEMPTS = 2;
+const RETRYABLE_NETWORK_ERROR_CODES = new Set([
+  'EAI_AGAIN',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EHOSTUNREACH',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_SOCKET',
+]);
+
 const DEFAULT_ANALYSIS_PROMPT = `你是一个梗图和短视频素材整理助手。请分析用户提供的一张图片；视频和动图均使用浏览器生成的第一帧 JPEG 封面，并且只返回 JSON，不要返回 Markdown 代码块或额外解释。
 
 JSON 必须严格包含以下字段：
@@ -171,34 +188,36 @@ export class AiService {
         : isAnimatedImage
           ? `请分析这张动图的第一帧画面。请概括画面主体、可见动作线索、情绪和适合使用的语境。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`
           : `请分析这张梗图。当前已有标题：${meme.title || '无'}；当前已有描述：${meme.description || '无'}；推荐标签：${recommendedTags}。请按照系统提示词返回 JSON。`;
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${options.apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await this.fetchWithNetworkRetry(
+      `${baseUrl}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${options.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          temperature: 0.2,
+          max_tokens: 800,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: DEFAULT_ANALYSIS_PROMPT },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: userPrompt },
+                ...imageSources.map((image) => ({
+                  type: 'image_url' as const,
+                  image_url: { url: image.url },
+                })),
+              ],
+            },
+          ],
+        }),
       },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        temperature: 0.2,
-        max_tokens: 800,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: DEFAULT_ANALYSIS_PROMPT },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: userPrompt },
-              ...imageSources.map((image) => ({
-                type: 'image_url' as const,
-                image_url: { url: image.url },
-              })),
-            ],
-          },
-        ],
-      }),
-      signal: AbortSignal.timeout(60_000),
-    });
+    );
 
     const payload = (await response.json().catch(() => undefined)) as
       ChatCompletionResponse | undefined;
@@ -267,9 +286,135 @@ export class AiService {
     };
   }
 
+  private async fetchWithNetworkRetry(
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
+    for (let attempt = 1; attempt <= AI_NETWORK_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await fetch(url, {
+          ...init,
+          signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
+        });
+      } catch (error) {
+        const shouldRetry =
+          attempt < AI_NETWORK_MAX_ATTEMPTS &&
+          this.isRetryableNetworkError(error);
+
+        if (!shouldRetry) {
+          throw error;
+        }
+
+        this.logger.warn(
+          `AI request network failure, retrying once: ${this.getErrorMessage(error)}`,
+        );
+      }
+    }
+
+    throw new Error('AI 网络请求失败');
+  }
+
+  private isRetryableNetworkError(error: unknown): boolean {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        return true;
+      }
+
+      if (error instanceof TypeError && error.message === 'fetch failed') {
+        return true;
+      }
+    }
+
+    return this.collectErrorCodes(error).some((code) =>
+      RETRYABLE_NETWORK_ERROR_CODES.has(code),
+    );
+  }
+
+  private collectErrorCodes(error: unknown): string[] {
+    const codes = new Set<string>();
+    const visited = new Set<object>();
+
+    const visit = (value: unknown) => {
+      if (!value || typeof value !== 'object' || visited.has(value)) {
+        return;
+      }
+
+      visited.add(value);
+      const errorRecord = value as Record<string, unknown>;
+
+      if (typeof errorRecord.code === 'string') {
+        codes.add(errorRecord.code);
+      }
+
+      visit(errorRecord.cause);
+
+      if (Array.isArray(errorRecord.errors)) {
+        errorRecord.errors.forEach(visit);
+      }
+    };
+
+    visit(error);
+    return [...codes];
+  }
+
+  private getErrorDiagnostics(error: unknown): string {
+    const diagnostics = new Set<string>();
+    const visited = new Set<object>();
+
+    const visit = (value: unknown, isRoot = false) => {
+      if (!value || typeof value !== 'object' || visited.has(value)) {
+        return;
+      }
+
+      visited.add(value);
+      const errorRecord = value as Record<string, unknown>;
+      const parts: string[] = [];
+
+      if (typeof errorRecord.code === 'string') {
+        parts.push(errorRecord.code);
+      } else if (
+        isRoot &&
+        typeof errorRecord.name === 'string' &&
+        ['AbortError', 'TimeoutError'].includes(errorRecord.name)
+      ) {
+        parts.push(errorRecord.name);
+      }
+
+      if (typeof errorRecord.syscall === 'string') {
+        parts.push(errorRecord.syscall);
+      }
+
+      if (typeof errorRecord.address === 'string') {
+        const address =
+          typeof errorRecord.port === 'number'
+            ? `${errorRecord.address}:${errorRecord.port}`
+            : errorRecord.address;
+        parts.push(address);
+      }
+
+      if (parts.length > 0) {
+        diagnostics.add(parts.join(' '));
+      }
+
+      visit(errorRecord.cause);
+
+      if (Array.isArray(errorRecord.errors)) {
+        errorRecord.errors.forEach((nestedError) => visit(nestedError));
+      }
+    };
+
+    visit(error, true);
+    return [...diagnostics].slice(0, 5).join('; ');
+  }
+
   private getErrorMessage(error: unknown): string {
     if (error instanceof Error && error.message) {
-      return error.message.slice(0, 500);
+      const diagnostics = this.getErrorDiagnostics(error);
+      const message = diagnostics
+        ? `${error.message} (${diagnostics})`
+        : error.message;
+
+      return message.slice(0, 500);
     }
 
     return 'AI 分析失败，请稍后重试';
